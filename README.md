@@ -1,6 +1,5 @@
 ---
 title: UNICEF Advisory Chatbot
-emoji: 🌍
 colorFrom: blue
 colorTo: cyan
 sdk: docker

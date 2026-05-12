@@ -36,8 +36,8 @@ qdrant-client==1.12.2
 redis==5.3.1
 
 # ── Embeddings / ML ──────────────────────────────────────────────────────────
-# torch est installé via le Dockerfile (wheel CPU pour réduire la taille)
-sentence-transformers==3.4.1
+# torch est installé via le Dockerfile (wheel CPU pour réduire la taille)# torch==2.2.2 a été compilé contre NumPy 1.x → forcer numpy<2
+numpy<2sentence-transformers==3.4.1
 pypdf>=4.0.0          # requis par PyPDFLoader (langchain-community)
 docx2txt>=0.8         # requis par Docx2txtLoader
 transformers==4.57.6

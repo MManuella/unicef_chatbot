@@ -44,6 +44,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # ── Dépendances Python ────────────────────────────────────────────────────────
+# NumPy < 2 d'abord : torch==2.2.2 a été compilé contre NumPy 1.x
+RUN pip install --no-cache-dir "numpy<2"
+
 # PyTorch CPU d'abord (évite le téléchargement de la version CUDA ~3 Go)
 RUN pip install --no-cache-dir \
     torch==2.2.2 \

@@ -95,14 +95,13 @@ class RAGService:
                             excerpt=excerpt,
                         )
 
-            # Étape 4 : Construire le prompt complet
-            prompt = (
-                f"{SYSTEM_PROMPT}\n\n"
-                f"{RAG_PROMPT_TEMPLATE.format(context=context, question=question)}"
-            )
+            # Étape 4 : Construire le prompt utilisateur (contexte + question)
+            user_prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=question)
 
-            # Étape 5 : Envoyer au LLM et récupérer la réponse
-            answer = await self.llm_service.generate(prompt)
+            # Étape 5 : Envoyer au LLM
+            # Pour les modèles chat (Mistral API), SYSTEM_PROMPT est envoyé comme
+            # SystemMessage séparé — sinon le modèle l'ignore.
+            answer = await self.llm_service.generate(user_prompt, system_prompt=SYSTEM_PROMPT)
 
             # Étape 6 : Ajouter le disclaimer si c'est une question médicale
             disclaimer = MEDICAL_DISCLAIMER if is_medical_question(question) else None
@@ -136,10 +135,7 @@ class RAGService:
         # Filtrer les chunks de type table des matières
         docs = [d for d in docs if not _is_toc_chunk(d.page_content)]
         context = "\n\n".join([doc.page_content for doc in docs])
-        prompt = (
-            f"{SYSTEM_PROMPT}\n\n"
-            f"{RAG_PROMPT_TEMPLATE.format(context=context, question=question)}"
-        )
+        user_prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=question)
 
         # Construire les sources (on les aura besoin à la fin)
         # Pour chaque document, garder la page la plus pertinente (premier chunk trouvé)
@@ -171,5 +167,5 @@ class RAGService:
         disclaimer = MEDICAL_DISCLAIMER if is_medical_question(question) else None
 
         # Étape 5 : Stream les tokens
-        async for chunk in self.llm_service.stream(prompt):
+        async for chunk in self.llm_service.stream(user_prompt, system_prompt=SYSTEM_PROMPT):
             yield {"token": chunk, "sources": sources, "disclaimer": disclaimer}

@@ -68,20 +68,35 @@ class LLMService:
         """Extrait le texte d'une réponse LLM (str ou AIMessage)."""
         return result.content if hasattr(result, "content") else str(result)
 
-    async def generate(self, prompt: str) -> str:
+    async def generate(self, prompt: str, system_prompt: str = "") -> str:
         try:
-            result = await self.llm.ainvoke(prompt)
+            if self._is_chat_model and system_prompt:
+                from langchain_core.messages import SystemMessage, HumanMessage
+                messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
+                result = await self.llm.ainvoke(messages)
+            else:
+                full = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                result = await self.llm.ainvoke(full)
             return self._extract_text(result)
         except Exception as e:
             logging.error(f"[LLMService] Erreur generate : {e}")
             raise RuntimeError("Erreur lors de l'appel au modèle LLM.") from e
 
-    async def stream(self, prompt: str):
+    async def stream(self, prompt: str, system_prompt: str = ""):
         try:
-            async for chunk in self.llm.astream(prompt):
-                token = self._extract_text(chunk)
-                if token:
-                    yield token
+            if self._is_chat_model and system_prompt:
+                from langchain_core.messages import SystemMessage, HumanMessage
+                messages = [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
+                async for chunk in self.llm.astream(messages):
+                    token = self._extract_text(chunk)
+                    if token:
+                        yield token
+            else:
+                full = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+                async for chunk in self.llm.astream(full):
+                    token = self._extract_text(chunk)
+                    if token:
+                        yield token
         except Exception as e:
             logging.error(f"[LLMService] Erreur stream : {e}")
             raise RuntimeError("Erreur lors du streaming du modèle LLM.") from e

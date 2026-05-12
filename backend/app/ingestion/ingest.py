@@ -148,12 +148,17 @@ def ingest():
         print(f"  Mode serveur : {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
         client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
 
-    # Recréer la collection (supprime l'ancienne si elle existe)
-    client.recreate_collection(
+    # recreate_collection() supprimé depuis qdrant-client 1.7.0
+    # → supprimer si elle existe, puis créer
+    existing = [c.name for c in client.get_collections().collections]
+    if settings.QDRANT_COLLECTION in existing:
+        client.delete_collection(settings.QDRANT_COLLECTION)
+
+    client.create_collection(
         collection_name=settings.QDRANT_COLLECTION,
         vectors_config=VectorParams(
             size=384,              # Dimension de multilingual-e5-small
-            distance=Distance.COSINE,  # Mesure de similarité
+            distance=Distance.COSINE,
         ),
     )
 

@@ -38,6 +38,8 @@ redis==5.3.1
 # ── Embeddings / ML ──────────────────────────────────────────────────────────
 # torch est installé via le Dockerfile (wheel CPU pour réduire la taille)
 sentence-transformers==3.4.1
+pypdf>=4.0.0          # requis par PyPDFLoader (langchain-community)
+docx2txt>=0.8         # requis par Docx2txtLoader
 transformers==4.57.6
 tokenizers==0.22.2
 huggingface_hub==0.36.2

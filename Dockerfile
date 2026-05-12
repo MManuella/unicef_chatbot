@@ -58,8 +58,8 @@ COPY backend/ ./backend/
 
 # ── Téléchargement du PDF depuis GitHub ───────────────────────────────────────
 # Le PDF est exclu du push HF Spaces (.hfignore) car HF refuse les binaires.
-# On le télécharge ici depuis GitHub (repo public, fichier Git LFS).
-ARG GITHUB_PDF_URL=https://media.githubusercontent.com/media/MManuella/unicef_chatbot/main/backend/data/documents/guide-peda-v6-2.pdf
+# Il est hébergé dans les GitHub Releases (binary assets, URL publique directe).
+ARG GITHUB_PDF_URL=https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/guide-peda-v6-2.pdf
 RUN mkdir -p /app/backend/data/documents && \
     curl -L --retry 3 --fail "$GITHUB_PDF_URL" \
          -o /app/backend/data/documents/guide-peda-v6-2.pdf && \

@@ -30,30 +30,41 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # historique complet (nécessaire pour git push)
-          lfs: false       # pas de LFS — le PDF est téléchargé par curl dans le Dockerfile
+          lfs: false
 
-      - name: Push to HuggingFace Spaces
+      - name: Install rsync
+        run: sudo apt-get install -y rsync
+
+      - name: Deploy to HuggingFace Spaces
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_SPACE: ${{ secrets.HF_SPACE }}
         run: |
+          # ── Approche "clean-room" ──────────────────────────────────────────
+          # Crée un dépôt git vierge (1 seul commit, 0 historique, 0 LFS)
+          # pour éviter tout problème de binaires / LFS dans l'historique.
+          # HF Spaces n'a besoin que du code courant pour rebuilder l'image.
+          # ──────────────────────────────────────────────────────────────────
+
+          # Copier les fichiers dans un dossier temporaire (sans le PDF)
+          rsync -a \
+            --exclude='.git' \
+            --exclude='backend/data/documents/*.pdf' \
+            ./ /tmp/hf-deploy/
+
+          cd /tmp/hf-deploy
+
+          # Initialiser un dépôt git propre
+          git init
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name  "github-actions[bot]"
 
-          # Désactiver le hook git-lfs (ubuntu-latest l'a préinstallé)
-          # Le PDF n'est pas dans git : il est téléchargé par curl dans le Dockerfile
-          git lfs uninstall --skip-smudge 2>/dev/null || true
-          git config --global filter.lfs.smudge   cat
-          git config --global filter.lfs.clean    cat
-          git config --global filter.lfs.process  ""
-          git config --global filter.lfs.required false
+          git add .
+          git commit -m "deploy: ${{ github.sha }}"
 
-          # Ajouter le remote HuggingFace
-          git remote add hf "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
-
-          # Force-push → HF Space reconstruit automatiquement l'image Docker
-          # GIT_LFS_SKIP_PUSH=1 empêche le hook pre-push de téléverser des objets LFS
-          GIT_LFS_SKIP_PUSH=1 git push hf main:main --force
+          # Force-push vers HF Spaces (aucun historique, aucun binaire)
+          git push \
+            "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}" \
+            HEAD:main --force
 
           echo "✓ Déployé vers https://huggingface.co/spaces/${HF_SPACE}"

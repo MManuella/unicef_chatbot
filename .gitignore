@@ -29,6 +29,10 @@ backend/.cache/
 *.pt
 *.pth
 
+# ── Documents binaires (PDF) ─────────────────────────────────────────────────
+# Le PDF est téléchargé via curl dans le Dockerfile, pas stocké dans git
+backend/data/documents/*.pdf
+
 # ── Qdrant data (index vectoriel local) ───────────────────────────────────────
 # Sera recréé au build Docker (RUN python -m app.ingestion.ingest)
 backend/qdrant_data/

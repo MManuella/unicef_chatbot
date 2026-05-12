@@ -1,1 +1,3 @@
-*.pdf filter=lfs diff=lfs merge=lfs -text
+# Les fichiers PDF ne sont pas stockés dans git.
+# Le PDF est téléchargé depuis GitHub LFS via curl au moment du build Docker.
+# Voir : ARG GITHUB_PDF_URL dans le Dockerfile

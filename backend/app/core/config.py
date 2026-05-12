@@ -35,7 +35,9 @@ class Settings(BaseSettings):
     HF_INFERENCE_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
 
     # --- Embeddings ---
-    EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"
+    # multilingual-e5-small : ~470 Mo, 384 dimensions, multilingue (FR/EN)
+    # (multilingual-e5-large était ~2 Go → trop lourd pour HF Spaces free tier)
+    EMBEDDING_MODEL: str = "intfloat/multilingual-e5-small"
 
     # --- Qdrant ---
     QDRANT_HOST: str = "localhost"

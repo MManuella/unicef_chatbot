@@ -152,7 +152,7 @@ def ingest():
     client.recreate_collection(
         collection_name=settings.QDRANT_COLLECTION,
         vectors_config=VectorParams(
-            size=1024,             # Dimension de multilingual-e5-large
+            size=384,              # Dimension de multilingual-e5-small
             distance=Distance.COSINE,  # Mesure de similarité
         ),
     )

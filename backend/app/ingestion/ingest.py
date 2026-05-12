@@ -163,13 +163,14 @@ def ingest():
     )
 
     if settings.QDRANT_LOCAL_PATH:
-        # Mode local : utiliser le client directement
-        QdrantVectorStore.from_documents(
-            documents=chunks,
-            embedding=embeddings,
-            collection_name=settings.QDRANT_COLLECTION,
+        # Mode local : passer le client existant directement pour éviter
+        # le deepcopy de sqlite3.Connection dans from_documents()
+        qs = QdrantVectorStore(
             client=client,
+            collection_name=settings.QDRANT_COLLECTION,
+            embedding=embeddings,
         )
+        qs.add_documents(chunks)
     else:
         QdrantVectorStore.from_documents(
             documents=chunks,

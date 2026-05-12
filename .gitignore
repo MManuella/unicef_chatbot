@@ -1,0 +1,51 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+.Python
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+
+# ── Variables d'environnement ─────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# (garder .env.hf.example — c'est un template sans vraies valeurs)
+
+# ── Modèles ML / cache HuggingFace ───────────────────────────────────────────
+# Ces fichiers sont très lourds (~1-3 Go) et seront téléchargés au build HF
+.cache/
+~/.cache/huggingface/
+backend/.cache/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# ── Qdrant data (index vectoriel local) ───────────────────────────────────────
+# Sera recréé au build Docker (RUN python -m app.ingestion.ingest)
+backend/qdrant_data/
+qdrant_data/
+
+# ── Node.js ───────────────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.production.local
+
+# ── IDE / OS ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

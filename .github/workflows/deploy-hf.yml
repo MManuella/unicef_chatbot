@@ -1,0 +1,50 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  deploy-hf.yml — Synchronise le dépôt GitHub vers HuggingFace Spaces
+#
+#  Déclencheur : push sur la branche `main`
+#  Action      : force-push le code vers le Space HF (qui rebuild l'image Docker)
+#
+#  Secrets GitHub à configurer (Settings → Secrets → Actions) :
+#    HF_TOKEN  → Token HuggingFace avec permission WRITE
+#                (https://huggingface.co/settings/tokens)
+#    HF_SPACE  → Identifiant du Space, format : "username/space-name"
+#                Ex : "moncompte/unicef-chatbot"
+#
+#  Variables d'environnement à configurer dans le Space HF
+#  (Settings → Variables and Secrets) :
+#    MISTRAL_API_KEY → Clé API Mistral (https://console.mistral.ai)
+#    LLM_PROVIDER    → mistral_api
+#    ALLOWED_ORIGINS → ["*"]
+# ══════════════════════════════════════════════════════════════════════════════
+name: Deploy to HuggingFace Spaces
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync-to-huggingface:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet (nécessaire pour git push)
+          lfs: true        # inclure les fichiers Git LFS si présents
+
+      - name: Push to HuggingFace Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name  "github-actions[bot]"
+
+          # Ajouter le remote HuggingFace
+          git remote add hf "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
+
+          # Force-push → HF Space reconstruit automatiquement l'image Docker
+          git push hf main:main --force
+
+          echo "✓ Déployé vers https://huggingface.co/spaces/${HF_SPACE}"

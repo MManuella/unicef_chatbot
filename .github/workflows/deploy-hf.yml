@@ -41,10 +41,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name  "github-actions[bot]"
 
+          # Désactiver le hook git-lfs (ubuntu-latest l'a préinstallé)
+          # Le PDF n'est pas dans git : il est téléchargé par curl dans le Dockerfile
+          git lfs uninstall --skip-smudge 2>/dev/null || true
+          git config --global filter.lfs.smudge   cat
+          git config --global filter.lfs.clean    cat
+          git config --global filter.lfs.process  ""
+          git config --global filter.lfs.required false
+
           # Ajouter le remote HuggingFace
           git remote add hf "https://user:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
 
           # Force-push → HF Space reconstruit automatiquement l'image Docker
-          git push hf main:main --force
+          # GIT_LFS_SKIP_PUSH=1 empêche le hook pre-push de téléverser des objets LFS
+          GIT_LFS_SKIP_PUSH=1 git push hf main:main --force
 
           echo "✓ Déployé vers https://huggingface.co/spaces/${HF_SPACE}"

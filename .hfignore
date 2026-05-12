@@ -1,0 +1,4 @@
+# Fichiers binaires exclus du push HuggingFace Spaces
+# (HF Spaces n'accepte pas les binaires > quelques Ko via git push)
+# Le PDF est téléchargé directement depuis GitHub dans le Dockerfile.
+backend/data/documents/

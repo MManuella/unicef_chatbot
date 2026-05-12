@@ -49,10 +49,13 @@ jobs:
           # Copier les fichiers dans un dossier temporaire (sans le PDF)
           rsync -a \
             --exclude='.git' \
-            --exclude='backend/data/documents/*.pdf' \
+            --exclude='*.pdf' \
             ./ /tmp/hf-deploy/
 
           cd /tmp/hf-deploy
+
+          # Désactiver git-lfs dans ce nouveau dépôt (ubuntu-latest l'a préinstallé)
+          git lfs uninstall 2>/dev/null || true
 
           # Initialiser un dépôt git propre
           git init

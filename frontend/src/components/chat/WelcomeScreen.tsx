@@ -27,17 +27,12 @@ export default function WelcomeScreen({ onSelectQuestion: _ }: WelcomeScreenProp
         </div>
       </div>
 
-      {/* Sous-titre */}
-      <p className="max-w-md text-center text-base leading-relaxed text-gray-500 dark:text-white/68">
-        Posez votre question ou choisissez un sujet ci-dessous pour commencer.
-      </p>
-
       {/* Hint si pas de thème sélectionné */}
       {!selectedThemeId && (
         <div className="animate-fade-in flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 dark:border-white/10 dark:bg-white/6 dark:backdrop-blur-sm">
           <Icon icon="mdi:lightbulb-on-outline" className="text-[#1CABE2] text-base flex-shrink-0" />
           <p className="text-sm text-gray-500 dark:text-white/68">
-            Sélectionnez une thématique pour voir les suggestions de questions.
+            Sélectionnez une thématique pour voir les suggestions de questions, ou posez-vous vous-même une question.
           </p>
         </div>
       )}

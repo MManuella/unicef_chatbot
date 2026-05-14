@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { Message, Source } from "@/lib/types";
 import { copyToClipboard } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface MessageItemProps {
   message: Message;
@@ -77,18 +78,31 @@ export default function MessageItem({ message, onViewSources }: MessageItemProps
     <div className="flex items-start gap-3 msg-appear">
       {/* Contenu */}
       <div className="flex flex-col gap-2 flex-1 min-w-0 max-w-[85%]">
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700 dark:text-white/84">
-          {displayContent}
-        </p>
+        <div className="max-w-none text-sm leading-relaxed text-gray-700 dark:text-white/84">
+          <ReactMarkdown
+            components={{
+              ol: ({ children }) => <ol className="list-decimal pl-5 mt-2 mb-2 space-y-2">{children}</ol>,
+              ul: ({ children }) => <ul className="list-disc pl-5 mt-2 mb-2 space-y-1.5">{children}</ul>,
+              li: ({ children }) => <li className="leading-relaxed text-sm">{children}</li>,
+              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              strong: ({ children }) => <strong className="font-semibold text-gray-800 dark:text-white/95">{children}</strong>,
+              h1: ({ children }) => <h1 className="text-base font-bold mt-3 mb-1 text-gray-800 dark:text-white">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-[13px] font-bold mt-2 mb-1 text-gray-800 dark:text-white">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1 text-gray-800 dark:text-white">{children}</h3>,
+            }}
+          >
+            {displayContent}
+          </ReactMarkdown>
+        </div>
 
         {/* Boutons action */}
         <div className="flex items-center gap-1.5">
           {message.sources && message.sources.length > 0 && (
             <button
               onClick={() => onViewSources(message.sources!)}
-              className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-500 transition-all duration-150 hover:border-[#1CABE2]/40 hover:bg-blue-50 hover:text-[#1CABE2] dark:border-white/12 dark:text-white/68 dark:hover:bg-[#1CABE2]/10 dark:hover:text-white"
+              className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-0.5 text-[10px] text-gray-500 transition-all duration-150 hover:border-[#1CABE2]/40 hover:bg-blue-50 hover:text-[#1CABE2] dark:border-white/12 dark:text-white/68 dark:hover:bg-[#1CABE2]/10 dark:hover:text-white"
             >
-              <Icon icon="mdi:plus" className="text-xs" />
+              <Icon icon="mdi:plus" className="text-[10px]" />
               Sources
             </button>
           )}

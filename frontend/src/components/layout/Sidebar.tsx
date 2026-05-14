@@ -2,31 +2,40 @@
 
 import { Icon } from "@iconify/react";
 import { useChatStore } from "@/store/chatStore";
-import { cn, truncate } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { useRouter, usePathname } from "next/navigation";
 
+/** Truncate a conversation title for display (max 32 chars, word boundary) */
+function truncDisplay(title: string, max = 32): string {
+  if (title.length <= max) return title;
+  const cut = title.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 12 ? cut.slice(0, lastSpace) : cut) + "…";
+}
 // ─── Icon-only strip (collapsed state) ────────────────────────────────────────
 function SidebarCollapsed({
   onOpenSearch,
 }: {
   onOpenSearch: () => void;
 }) {
-  const { createConversation, toggleSidebar, toggleThemeMode, ui } =
+  const { toggleSidebar, toggleThemeMode, ui, setSelectedTheme } =
     useChatStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleNewConversation = () => {
-    const id = createConversation();
-    router.push(`/chat/${id}`);
+    setSelectedTheme(null);
+    router.push("/");
   };
 
   return (
-    <aside className="flex h-full w-12 flex-col items-center bg-[var(--background)] py-3 text-[color:var(--foreground)] dark:bg-[#0b1220] dark:text-white/78 flex-shrink-0">
+    <aside className="flex h-full w-12 flex-col items-center bg-transparent py-3 text-[color:var(--foreground)] dark:text-white/78 flex-shrink-0">
       {/* Top icons */}
       <div className="flex flex-col items-center gap-1 flex-1">
         <StripBtn
-          icon="mdi:view-dashboard-outline"
+          icon="mdi:forwardburger"
           label="Expand sidebar"
           onClick={toggleSidebar}
         />
@@ -34,6 +43,7 @@ function SidebarCollapsed({
           icon="mdi:plus"
           label="New discussion"
           onClick={handleNewConversation}
+          isActive={pathname === "/"}
         />
         <StripBtn
           icon="mdi:magnify"
@@ -69,17 +79,24 @@ function StripBtn({
   icon,
   label,
   onClick,
+  isActive,
 }: {
   icon: string;
   label: string;
   onClick?: () => void;
+  isActive?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+        isActive
+          ? "bg-white/70 text-[#1CABE2] dark:bg-gray-800 dark:text-[#1CABE2]"
+          : "text-gray-400 hover:bg-white/70 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+      )}
     >
       <Icon icon={icon} className="text-[18px]" />
     </button>
@@ -97,19 +114,23 @@ function SidebarExpanded({
     activeConversationId,
     ui,
     setActiveConversation,
-    createConversation,
     deleteConversation,
     toggleSaveConversation,
     renameConversation,
     toggleSidebar,
     setThemeMode,
+    setSelectedTheme,
   } = useChatStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -142,6 +163,26 @@ function SidebarExpanded({
     setMenuOpenId(id);
   };
 
+  // Focus input renommage à l'ouverture
+  useEffect(() => {
+    if (renameId) {
+      const conv = conversations.find((c) => c.id === renameId);
+      setRenameValue(conv?.title ?? "");
+      setTimeout(() => renameInputRef.current?.select(), 50);
+    }
+  }, [renameId, conversations]);
+
+  const openRename = (id: string) => {
+    setMenuOpenId(null);
+    setRenameId(id);
+  };
+
+  const handleRenameSubmit = () => {
+    if (!renameId || !renameValue.trim()) return;
+    renameConversation(renameId, renameValue.trim());
+    setRenameId(null);
+  };
+
   const handleDelete = (id: string) => {
     const willBeEmpty = conversations.length <= 1;
     deleteConversation(id);
@@ -150,12 +191,7 @@ function SidebarExpanded({
   };
 
   const handleRename = (id: string) => {
-    const conversation = conversations.find((c) => c.id === id);
-    if (!conversation) return;
-    const nextTitle = window.prompt("Renommer la discussion", conversation.title);
-    if (!nextTitle) return;
-    renameConversation(id, nextTitle);
-    setMenuOpenId(null);
+    openRename(id);
   };
 
   const menuConversation = menuOpenId
@@ -163,7 +199,7 @@ function SidebarExpanded({
     : null;
 
   return (
-    <aside className="flex h-full w-72 flex-col bg-[var(--background)] text-[color:var(--foreground)] dark:bg-[#0b1220] dark:text-white/78 flex-shrink-0">
+    <aside className="flex h-full w-64 flex-col bg-transparent text-[color:var(--foreground)] dark:text-white/78 flex-shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
@@ -174,20 +210,25 @@ function SidebarExpanded({
         </div>
         <button
           onClick={toggleSidebar}
-          className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-white/70 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+          className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-white/60 dark:hover:bg-gray-700 dark:hover:text-gray-300"
           aria-label="Collapse sidebar"
         >
-          <Icon icon="mdi:dock-left" className="text-base" />
+          <Icon icon="mdi:backburger" className="text-[18px]" />
         </button>
       </div>
 
       {/* New discussion */}
       <div className="px-3 pt-3">
         <button
-          onClick={() => { const id = createConversation(); router.push(`/chat/${id}`); }}
-          className="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-sm text-[color:var(--foreground)] transition-all duration-200 hover:border-blue-100 hover:bg-white/70 hover:text-[#1CABE2] dark:text-gray-300 dark:hover:border-blue-800/30 dark:hover:bg-blue-900/20"
+          onClick={() => { setSelectedTheme(null); router.push("/"); }}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all duration-200",
+            pathname === "/"
+              ? "border-blue-100 bg-white/70 text-[#1CABE2] dark:border-blue-800/30 dark:bg-blue-900/20"
+              : "border-transparent text-gray-800 hover:border-blue-100 hover:bg-white/70 hover:text-[#1CABE2] dark:text-gray-200 dark:hover:border-blue-800/30 dark:hover:bg-blue-900/20"
+          )}
         >
-          <Icon icon="mdi:plus" className="text-base text-gray-400" />
+          <Icon icon="mdi:plus" className={cn("text-base", pathname === "/" ? "text-[#1CABE2]" : "text-gray-400")} />
           Nouvelle discussion
         </button>
       </div>
@@ -196,12 +237,10 @@ function SidebarExpanded({
       <div className="px-3 pt-1">
         <button
           onClick={onOpenSearch}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-white/70 dark:hover:bg-gray-800/60"
+          className="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-sm text-gray-800 transition-all duration-200 hover:border-blue-100 hover:bg-white/70 hover:text-[#1CABE2] dark:text-gray-200 dark:hover:border-blue-800/30 dark:hover:bg-blue-900/20"
         >
-          <Icon icon="mdi:magnify" className="text-base text-gray-400 flex-shrink-0" />
-          <span className="text-sm text-[color:var(--foreground)] dark:text-white/88">
-            Rechercher
-          </span>
+          <Icon icon="mdi:magnify" className="text-base text-gray-400" />
+          Rechercher
         </button>
       </div>
 
@@ -209,28 +248,32 @@ function SidebarExpanded({
       <div className="flex-1 overflow-y-auto px-3 pt-3 scrollbar-thin">
         <div className="space-y-0.5">
           {pinnedConversations.length > 0 && (
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Épinglées
             </p>
           )}
           {pinnedConversations.map((conv) => {
-            const isActive = conv.id === activeConversationId;
+            const isActive = conv.id === activeConversationId && pathname !== "/";
             return (
               <div
                 key={conv.id}
                 className={cn(
                   "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
                   isActive
-                    ? "bg-white shadow-sm shadow-slate-200/60 dark:bg-blue-900/20 pl-3"
-                    : "hover:bg-white/70 dark:hover:bg-gray-800/60"
+                    ? "bg-gray-200/70 dark:bg-blue-900/20"
+                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
                 )}
                 onClick={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter") { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); } }}
               >
-                <p className={cn("flex-1 text-sm truncate text-[color:var(--foreground)] transition-colors dark:text-white/88", isActive && "font-medium text-gray-700 dark:text-white")}>
-                  {truncate(conv.title, 35)}
+                <p
+                  className={cn("flex-1 text-[13px] truncate text-gray-800 transition-colors dark:text-white/88", isActive && "font-semibold text-gray-900 dark:text-white")}
+                  title={conv.title}
+                  onDoubleClick={(e) => { e.stopPropagation(); openRename(conv.id); }}
+                >
+                  {truncDisplay(conv.title)}
                 </p>
                 <button
                   onClick={(e) => openMenu(conv.id, e)}
@@ -249,30 +292,34 @@ function SidebarExpanded({
           })}
           {regularConversations.length > 0 && (
             <p className={cn(
-              "px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400",
+              "px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500",
               pinnedConversations.length > 0 && "pt-3"
             )}>
               Récentes
             </p>
           )}
           {regularConversations.map((conv) => {
-            const isActive = conv.id === activeConversationId;
+            const isActive = conv.id === activeConversationId && pathname !== "/";
             return (
               <div
                 key={conv.id}
                 className={cn(
                   "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
                   isActive
-                    ? "bg-white shadow-sm shadow-slate-200/60 dark:bg-blue-900/20 pl-3"
-                    : "hover:bg-white/70 dark:hover:bg-gray-800/60"
+                    ? "bg-gray-200/70 dark:bg-blue-900/20"
+                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
                 )}
                 onClick={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter") { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); } }}
               >
-                <p className={cn("flex-1 text-sm truncate text-[color:var(--foreground)] transition-colors dark:text-white/88", isActive && "font-medium text-gray-700 dark:text-white")}>
-                  {truncate(conv.title, 35)}
+                <p
+                  className={cn("flex-1 text-[13px] truncate text-gray-800 transition-colors dark:text-white/88", isActive && "font-semibold text-gray-900 dark:text-white")}
+                  title={conv.title}
+                  onDoubleClick={(e) => { e.stopPropagation(); openRename(conv.id); }}
+                >
+                  {truncDisplay(conv.title)}
                 </p>
                 <button
                   onClick={(e) => openMenu(conv.id, e)}
@@ -322,7 +369,7 @@ function SidebarExpanded({
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all",
               ui.themeMode === "dark"
-                ? "bg-white text-gray-800 shadow-sm dark:bg-gray-600 dark:text-gray-100"
+                ? "bg-gray-200 text-gray-800 shadow-sm dark:bg-gray-600 dark:text-gray-100"
                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
             )}
           >
@@ -334,7 +381,7 @@ function SidebarExpanded({
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all",
               ui.themeMode === "light"
-                ? "bg-white text-gray-800 shadow-sm dark:bg-gray-600 dark:text-gray-100"
+                ? "bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-100"
                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
             )}
           >
@@ -390,8 +437,14 @@ function SidebarExpanded({
 
       {/* Confirmation dialog */}
       {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-80 mx-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setConfirmDeleteId(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-80 mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">
               Supprimer la discussion ?
             </h3>
@@ -414,6 +467,51 @@ function SidebarExpanded({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Renommer */}
+      {renameId && createPortal(
+        <>
+          <div
+            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
+            onClick={() => setRenameId(null)}
+          />
+          <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0f1a28]">
+            <div className="flex items-center gap-2 mb-4">
+              <Icon icon="mdi:pencil-outline" className="text-[#1CABE2] text-lg" />
+              <h2 className="font-semibold text-gray-800 dark:text-white">Renommer la discussion</h2>
+            </div>
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameSubmit();
+                if (e.key === "Escape") setRenameId(null);
+              }}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-[#1CABE2] focus:ring-2 focus:ring-[#1CABE2]/20 dark:border-white/10 dark:bg-white/6 dark:text-white dark:focus:border-[#1CABE2]/60"
+              placeholder="Nom de la discussion"
+              autoComplete="off"
+            />
+            <div className="flex gap-2 mt-4 justify-end">
+              <button
+                onClick={() => setRenameId(null)}
+                className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRenameSubmit}
+                disabled={!renameValue.trim()}
+                className="rounded-xl bg-[#1CABE2] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d8bbf] disabled:opacity-40 transition-colors"
+              >
+                Renommer
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </aside>
   );
@@ -462,7 +560,7 @@ function SearchDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-3xl bg-white p-4 shadow-2xl dark:bg-[#1e2535]"
+        className="w-full max-w-xl rounded-3xl bg-white p-3 md:p-4 shadow-2xl dark:bg-[#1e2535]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
@@ -473,7 +571,7 @@ function SearchDialog({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher une discussion"
-            className="flex-1 bg-transparent text-sm text-black outline-none placeholder:text-gray-400 dark:text-white"
+            className="flex-1 bg-transparent text-xs md:text-sm text-black outline-none placeholder:text-gray-400 dark:text-white"
           />
           <button
             onClick={onClose}
@@ -505,10 +603,10 @@ function SearchDialog({
                     )}
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-black dark:text-white">
+                      <p className="truncate text-xs md:text-sm font-medium text-black dark:text-white" title={conversation.title}>
                         {conversation.title}
                       </p>
-                      <p className="mt-0.5 text-xs text-gray-400">
+                      <p className="mt-0.5 text-[10px] md:text-xs text-gray-400">
                         {formatConversationDate(conversation.updatedAt)}
                       </p>
                     </div>
@@ -531,17 +629,41 @@ function SearchDialog({
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function Sidebar() {
   const isExpanded = useChatStore((s) => s.ui.isSidebarOpen);
+  const toggleSidebar = useChatStore((s) => s.toggleSidebar);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <>
-      <div className="h-full pb-4 pt-4 md:pb-6 md:pt-6">
+      {/* ── Desktop: inline sidebar (hidden on mobile) ── */}
+      <div className="hidden md:flex h-full pb-6 pt-6 flex-shrink-0">
         {isExpanded ? (
           <SidebarExpanded onOpenSearch={() => setIsSearchOpen(true)} />
         ) : (
           <SidebarCollapsed onOpenSearch={() => setIsSearchOpen(true)} />
         )}
       </div>
+
+      {/* ── Mobile: backdrop overlay ── */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          isExpanded ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={toggleSidebar}
+        aria-hidden="true"
+      />
+
+      {/* ── Mobile: slide-in drawer ── */}
+      <div
+        className={cn(
+          "fixed left-0 top-0 h-full z-50 w-72 transition-transform duration-300 ease-in-out md:hidden",
+          "bg-[var(--background)] dark:bg-[#0b1220] shadow-2xl",
+          isExpanded ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <SidebarExpanded onOpenSearch={() => { setIsSearchOpen(true); }} />
+      </div>
+
       <SearchDialog
         open={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}

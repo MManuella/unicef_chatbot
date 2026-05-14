@@ -25,7 +25,9 @@ async def chat(
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Erreur interne du serveur.")
+        import logging
+        logging.exception("[CHAT] Erreur inattendue")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/stream")

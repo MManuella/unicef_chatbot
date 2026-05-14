@@ -50,11 +50,11 @@ export default function MessageInput({
     <div className="px-4 pb-5 pt-2">
       <div
         className={cn(
-          "mx-auto max-w-3xl rounded-2xl border bg-white",
+          "mx-auto max-w-3xl rounded-2xl border bg-white dark:bg-[#162132]",
           "border transition-all duration-200",
           focused
-            ? "border-[#1CABE2]/50 shadow-lg shadow-[#1CABE2]/8 ring-2 ring-[#1CABE2]/10"
-            : "border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:bg-white/6 dark:shadow-black/10 dark:hover:border-white/18 dark:hover:shadow-black/10"
+            ? "border-[#1CABE2]/50 shadow-lg shadow-[#1CABE2]/8 ring-2 ring-[#1CABE2]/10 dark:border-[#1CABE2]/40"
+            : "border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:shadow-black/10 dark:hover:border-white/18 dark:hover:shadow-black/10"
         )}
       >
         <textarea
@@ -64,7 +64,7 @@ export default function MessageInput({
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Posez votre question..."
+          placeholder=""
           disabled={disabled}
           rows={1}
           className={cn(

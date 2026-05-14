@@ -72,7 +72,7 @@ export default function ThemeSelector({
 
       {/* Tag de la thématique sélectionnée */}
       {selectedName && (
-        <div className="group flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-[#1CABE2] transition-all duration-150 hover:bg-blue-50 dark:text-[#7fd5ff] dark:hover:bg-[#1CABE2]/10">
+        <div className="group flex items-center gap-1 rounded-full px-2 py-1 text-sm font-medium text-[#1CABE2] transition-all duration-150 hover:bg-blue-50 dark:text-[#7fd5ff] dark:hover:bg-[#1CABE2]/10">
           {selectedName}
           <button
             onClick={(e) => {

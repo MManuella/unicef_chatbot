@@ -50,6 +50,7 @@ interface ChatState {
 
   // ─── Theme Actions ──────────────────────────────────────────────────────────
   setSelectedTheme: (themeId: string | null) => void;
+  updateConversationTheme: (id: string, themeId: string | null) => void;
 
   // ─── UI Actions ─────────────────────────────────────────────────────────────
   toggleSidebar: () => void;
@@ -178,11 +179,18 @@ export const useChatStore = create<ChatState>()(
           conversations: state.conversations.map((c) => {
             if (c.id !== conversationId) return c;
             const messages = [...c.messages, newMessage];
-            // Auto-update title from first user message
-            const title =
-              c.messages.length === 0 && message.role === "user"
-                ? message.content.slice(0, 60)
-                : c.title;
+            // Auto-update title from first user message (truncate at word boundary)
+            let title = c.title;
+            if (c.messages.length === 0 && message.role === "user") {
+              const raw = message.content.trim();
+              if (raw.length <= 35) {
+                title = raw;
+              } else {
+                const cut = raw.slice(0, 35);
+                const lastSpace = cut.lastIndexOf(" ");
+                title = (lastSpace > 15 ? cut.slice(0, lastSpace) : cut) + "…";
+              }
+            }
             return { ...c, messages, title, updatedAt: new Date() };
           }),
         }));
@@ -215,15 +223,15 @@ export const useChatStore = create<ChatState>()(
       // ── Theme Actions ────────────────────────────────────────────────────────
       setSelectedTheme: (themeId) => {
         set({ selectedThemeId: themeId });
-        // Update current conversation theme if active
-        const { activeConversationId } = get();
-        if (activeConversationId) {
-          set((state) => ({
-            conversations: state.conversations.map((c) =>
-              c.id === activeConversationId ? { ...c, themeId } : c
-            ),
-          }));
-        }
+      },
+
+      updateConversationTheme: (id, themeId) => {
+        set((state) => ({
+          conversations: state.conversations.map((c) =>
+            c.id === id ? { ...c, themeId } : c
+          ),
+          selectedThemeId: themeId,
+        }));
       },
 
       // ── UI Actions ───────────────────────────────────────────────────────────

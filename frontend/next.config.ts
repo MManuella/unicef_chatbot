@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
+
   // output: 'standalone' crée un build minimal autonome pour la production.
   // Génère .next/standalone/server.js qui n'a besoin que d'un node_modules minimal.
   // Nécessaire pour le Dockerfile (évite d'embarquer 500 MB de node_modules).

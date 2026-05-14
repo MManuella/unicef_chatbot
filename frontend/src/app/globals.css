@@ -34,7 +34,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-fg);
   --color-destructive: var(--destructive);
-  --font-sans: var(--font-manrope);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-ibm-plex-mono);
 }
 

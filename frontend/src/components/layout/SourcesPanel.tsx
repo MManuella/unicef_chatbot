@@ -4,20 +4,37 @@ import { Icon } from "@iconify/react";
 import { Source } from "@/lib/types";
 import { useChatStore } from "@/store/chatStore";
 import { cn } from "@/lib/utils";
+import { useRef, useEffect } from "react";
 
 export default function SourcesPanel({ isOpen }: { isOpen: boolean }) {
   const { ui, closeSourcesPanel } = useChatStore();
   const sources = ui?.activeSources ?? [];
+  const desktopRef = useRef<HTMLElement>(null);
+  const mobileRef = useRef<HTMLElement>(null);
 
-  return (
-    <aside
-      className={cn(
-        "sources-surface h-full min-h-0 flex-shrink-0 overflow-hidden rounded-3xl border border-gray-200/80 bg-white text-gray-700 shadow-xl shadow-slate-200/70 transition-all duration-300 dark:border-white/10 dark:bg-[linear-gradient(180deg,#173149_0%,#102537_100%)] dark:text-white dark:shadow-[#07101c]/25",
-        "flex flex-col",
-        isOpen ? "w-80 opacity-100" : "w-0 min-w-0 opacity-0 pointer-events-none border-transparent shadow-none"
-      )}
-      aria-label="Sources"
-    >
+  useEffect(() => {
+    if (!isOpen) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        !desktopRef.current?.contains(target) &&
+        !mobileRef.current?.contains(target)
+      ) {
+        closeSourcesPanel();
+      }
+    };
+    timer = setTimeout(() => {
+      document.addEventListener("mousedown", handler);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handler);
+    };
+  }, [isOpen, closeSourcesPanel]);
+
+  const innerContent = (
+    <>
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-4 dark:border-white/10">
           <div className="flex items-center gap-2">
             <Icon icon="mdi:book-open-variant-outline" className="text-[#1CABE2] text-xl" />
@@ -34,7 +51,6 @@ export default function SourcesPanel({ isOpen }: { isOpen: boolean }) {
             <Icon icon="mdi:close" className="text-lg" />
           </button>
       </div>
-
       <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin">
         {sources.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -45,13 +61,51 @@ export default function SourcesPanel({ isOpen }: { isOpen: boolean }) {
           sources.map((s, i) => <SourceCard key={s.id} source={s} index={i + 1} />)
         )}
       </div>
-
       <div className="border-t border-gray-200 px-4 py-3 dark:border-white/10">
         <p className="text-center text-xs text-gray-400 dark:text-white/50">
           Consultez toujours un professionnel de santé pour un avis médical personnalisé.
         </p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile : backdrop + drawer off-canvas */}
+      <div
+        className={cn(
+          "md:hidden fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm transition-opacity duration-300",
+          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        )}
+        onClick={closeSourcesPanel}
+        aria-hidden="true"
+      />
+      <aside
+        ref={mobileRef}
+        className={cn(
+          "md:hidden fixed right-0 top-0 z-[160] h-full w-80 max-w-[90vw] flex flex-col",
+          "bg-white text-gray-700 shadow-2xl shadow-black/20",
+          "dark:bg-[linear-gradient(180deg,#173149_0%,#102537_100%)] dark:text-white dark:shadow-black/40",
+          "transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+        aria-label="Sources"
+      >
+        {innerContent}
+      </aside>
+
+      {/* Desktop : panneau inline dans le layout */}
+      <aside
+        ref={desktopRef}
+        className={cn(
+          "hidden md:flex flex-col sources-surface h-full min-h-0 flex-shrink-0 overflow-hidden rounded-3xl border border-gray-200/80 bg-white text-gray-700 shadow-xl shadow-slate-200/70 transition-all duration-300 dark:border-white/10 dark:bg-[linear-gradient(180deg,#173149_0%,#102537_100%)] dark:text-white dark:shadow-[#07101c]/25",
+          isOpen ? "w-80 opacity-100" : "w-0 min-w-0 opacity-0 pointer-events-none border-transparent shadow-none"
+        )}
+        aria-label="Sources"
+      >
+        {innerContent}
+      </aside>
+    </>
   );
 }
 

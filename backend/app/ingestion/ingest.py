@@ -157,7 +157,7 @@ def ingest():
     client.create_collection(
         collection_name=settings.QDRANT_COLLECTION,
         vectors_config=VectorParams(
-            size=384,              # Dimension de multilingual-e5-small
+            size=1024,             # Dimension de multilingual-e5-large
             distance=Distance.COSINE,
         ),
     )

@@ -32,21 +32,8 @@ export default function ChatPage({ params }: ChatPageProps) {
   useEffect(() => {
     if (!_hasHydrated) return;
     if (conversation) return; // All good
-    // The conversation for this URL no longer exists (e.g. was wiped by a
-    // multi-tab race condition). Redirect directly to the most recent valid
-    // conversation, bypassing / to avoid a redirect loop.
-    const first = conversations
-      .filter((c) => c.messages.length > 0)
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt ?? 0).getTime() -
-          new Date(a.updatedAt ?? 0).getTime()
-      )[0];
-    if (first) {
-      router.replace(`/chat/${first.id}`);
-    } else {
-      router.replace("/");
-    }
+    // The conversation for this URL no longer exists → back to welcome
+    router.replace("/");
   }, [_hasHydrated, conversation, conversations, router]);
 
   if (!conversation) {
@@ -60,7 +47,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--background)] dark:bg-[#0b1220]">
       <Sidebar />
-      <main className="flex-1 flex flex-col overflow-hidden bg-[var(--background)] dark:bg-[#0b1220]">
+        <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-[var(--background)] dark:bg-[#0b1220]">
         <ChatWindow key={id} conversationId={id} />
       </main>
     </div>

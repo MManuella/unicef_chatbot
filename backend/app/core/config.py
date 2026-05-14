@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_MODEL: str = "mistral:7b"
     LLM_TEMPERATURE: float = 0.3
-    LLM_MAX_TOKENS: int = 512
+    LLM_MAX_TOKENS: int = 1500
 
     # --- Mistral API (production) ---
     MISTRAL_API_KEY: str = ""

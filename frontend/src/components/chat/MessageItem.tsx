@@ -16,7 +16,7 @@ function cleanContent(text: string): string {
     .replace(/\(?(?:voir\s+)?(?:la\s+)?fiche\s+(?:info\s+)?(?:n[°o]?\s*)?\d+\)?[,.]?/gi, "")
     .replace(/\(?(?:voir\s+)?document\s+(?:n[°o]?\s*)?\d+\)?[,.]?/gi, "")
     .replace(/\(?(?:voir\s+)?source\s+(?:n[°o]?\s*)?\d+\)?[,.]?/gi, "")
-    .replace(/\s{2,}/g, " ")
+    .replace(/[^\S\n]{2,}/g, " ") // collapse spaces but preserve newlines
     .trim();
 }
 

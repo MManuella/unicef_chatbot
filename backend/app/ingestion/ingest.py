@@ -154,10 +154,15 @@ def ingest():
     if settings.QDRANT_COLLECTION in existing:
         client.delete_collection(settings.QDRANT_COLLECTION)
 
+    # Détecter la dimension automatiquement depuis le modèle
+    sample_vector = embeddings.embed_query("test")
+    embedding_dim = len(sample_vector)
+    print(f"  Dimension des vecteurs : {embedding_dim}")
+
     client.create_collection(
         collection_name=settings.QDRANT_COLLECTION,
         vectors_config=VectorParams(
-            size=1024,             # Dimension de multilingual-e5-large
+            size=embedding_dim,
             distance=Distance.COSINE,
         ),
     )

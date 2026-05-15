@@ -63,6 +63,10 @@ export async function sendMessageStream(
           if (!dataStr) continue;
 
           const data = JSON.parse(dataStr);
+          // Afficher le token EN PREMIER (même si done=true, cas guardrail)
+          if (data.token) {
+            onChunk(data.token);
+          }
           if (data.done) {
             // Fin du stream - récupérer les sources depuis le backend
             const sources: Source[] = (data.sources ?? []).map(
@@ -74,8 +78,6 @@ export async function sendMessageStream(
               })
             );
             onComplete(sources, payload.conversationId ?? "");
-          } else if (data.token) {
-            onChunk(data.token);
           }
         }
       }

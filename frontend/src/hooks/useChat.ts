@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { sendMessageStream } from "@/lib/api";
 
@@ -8,14 +8,12 @@ export function useChat(conversationId: string | null) {
   const { addMessage, updateMessage, selectedThemeId, conversations } =
     useChatStore();
   const [isLoading, setIsLoading] = useState(false);
+  // No abort-on-unmount: when the first message is sent from the welcome screen,
+  // router.push unmounts this component mid-stream. Aborting here would leave
+  // the assistant message stuck with isLoading:true forever. The abort at the
+  // top of each sendMessage/retryMessage is sufficient to prevent duplicate
+  // in-flight requests.
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Annuler tout stream en cours au démontage du composant
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
 
   const retryMessage = useCallback(
     async (userContent: string, assistantMessageId: string, targetConversationId?: string) => {
@@ -58,6 +56,7 @@ export function useChat(conversationId: string | null) {
             });
           },
           (sources) => {
+            setIsLoading(false);
             const stillExists = useChatStore
               .getState()
               .conversations.some((c) => c.id === convId);
@@ -68,7 +67,6 @@ export function useChat(conversationId: string | null) {
               isLoading: false,
               timestamp: new Date(),
             });
-            setIsLoading(false);
           },
           controller.signal,
         );
@@ -136,7 +134,7 @@ export function useChat(conversationId: string | null) {
             });
           },
           (sources, _conversationId) => {
-            // Vérifier que la conversation existe encore avant de mettre à jour
+            setIsLoading(false);
             const stillExists = useChatStore
               .getState()
               .conversations.some((c) => c.id === convId);
@@ -147,7 +145,6 @@ export function useChat(conversationId: string | null) {
               isLoading: false,
               timestamp: new Date(),
             });
-            setIsLoading(false);
           },
           controller.signal,
         );

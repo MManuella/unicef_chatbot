@@ -54,7 +54,7 @@ export default function MessageItem({ message, onViewSources, onRetry }: Message
     );
   }
 
-  if (message.isLoading) {
+  if (message.isLoading && !message.content) {
     return (
       <div className="flex items-start gap-3 msg-appear">
         <div className="flex items-center gap-1.5 py-2 px-1">
@@ -95,6 +95,9 @@ export default function MessageItem({ message, onViewSources, onRetry }: Message
           >
             {displayContent}
           </ReactMarkdown>
+          {message.isLoading && (
+            <span className="inline-block w-0.5 h-4 bg-[#1CABE2]/70 animate-pulse align-middle ml-0.5" />
+          )}
         </div>
 
         {/* Boutons action */}

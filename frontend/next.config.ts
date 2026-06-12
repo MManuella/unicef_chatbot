@@ -22,6 +22,21 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Prevents nginx (HF Spaces) from buffering SSE responses.
+  // Without this, nginx buffers the entire streaming response before sending it
+  // to the browser, which causes long RAG answers to hang indefinitely.
+  async headers() {
+    return [
+      {
+        source: "/api/chat/stream",
+        headers: [
+          { key: "X-Accel-Buffering", value: "no" },
+          { key: "Cache-Control", value: "no-cache" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

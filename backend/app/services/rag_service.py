@@ -65,7 +65,7 @@ async def _retrieve(vector_store: VectorStoreService, question: str):
     return [d for d in docs if not _is_toc_chunk(d.page_content)]
 
 
-NO_INFO_RESPONSE = "Je n'ai pas d'information sur ce sujet dans les documents UNICEF."
+NO_INFO_RESPONSE = "Je n'ai pas d'information sur ce sujet."
 
 
 class RAGService:

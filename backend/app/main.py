@@ -40,19 +40,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# ── Lifespan (ROB-7 : remplace @app.on_event("startup") déprécié) ─────────────
+# ── Lifespan ───────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
     from app.api.dependencies import get_chat_service
-    # Run in a thread: VectorStoreService loads ~470 MB embedding model
-    # synchronously; doing it here avoids blocking the event loop on the
-    # first request, and the @lru_cache ensures it happens exactly once.
-    svc = await asyncio.to_thread(get_chat_service)
+    svc = get_chat_service()
     if settings.LLM_PROVIDER.lower() == "ollama":
         try:
-            await svc.rag_service.llm_service.llm.ainvoke("init")
+            await asyncio.wait_for(
+                svc.rag_service.llm_service.llm.ainvoke("init"),
+                timeout=30.0,
+            )
             logging.info("[STARTUP] Ollama : modèle préchargé en RAM.")
+        except asyncio.TimeoutError:
+            logging.warning("[STARTUP] Ollama warm-up timeout (30s) — le modèle chargera à la première requête.")
         except Exception as e:
             logging.warning("[STARTUP] Ollama warm-up ignoré : %s", e)
     else:

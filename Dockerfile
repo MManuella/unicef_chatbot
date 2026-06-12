@@ -73,8 +73,11 @@ RUN mkdir -p /app/backend/data/documents && \
 # Le modèle d'embedding (~1,2 Go) est téléchargé ici et baqué dans l'image.
 # Les vecteurs sont stockés dans /app/qdrant_data et inclus dans l'image.
 ENV QDRANT_LOCAL_PATH=/app/qdrant_data
-ENV LLM_PROVIDER=mistral_api
-RUN cd /app/backend && python -m app.ingestion.ingest
+# MISTRAL_API_KEY n'est pas disponible au build (secret HF Spaces injecté au runtime).
+# On passe un placeholder pour passer la validation Pydantic — l'ingestion n'utilise pas le LLM.
+RUN cd /app/backend && \
+    LLM_PROVIDER=mistral_api MISTRAL_API_KEY=build_placeholder \
+    python -m app.ingestion.ingest --force
 
 # ── Frontend Next.js (build standalone) ──────────────────────────────────────
 # Structure attendue par le serveur standalone de Next.js :

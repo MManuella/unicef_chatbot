@@ -40,13 +40,13 @@ export function useChat(conversationId: string | null) {
 
       setIsLoading(true);
 
+      let accumulatedContent = "";
+
       try {
         // Historique sans le message assistant qu'on remplace
         const history = (conversation?.messages ?? [])
           .filter((m) => m.id !== assistantMessageId)
           .map((m) => ({ role: m.role, content: m.content }));
-
-        let accumulatedContent = "";
 
         await sendMessageStream(
           { message: userContent, themeId, conversationId: convId, history },
@@ -117,14 +117,14 @@ export function useChat(conversationId: string | null) {
 
       setIsLoading(true);
 
+      let accumulatedContent = "";
+
       try {
         const history =
           conversation?.messages.map((m) => ({
             role: m.role,
             content: m.content,
           })) ?? [];
-
-        let accumulatedContent = "";
 
         await sendMessageStream(
           { message: content, themeId, conversationId: convId, history },

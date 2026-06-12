@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useChatStore } from "@/store/chatStore";
 import { useRouter } from "next/navigation";
@@ -36,11 +37,10 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   const activeThemeId = conversationId ? (conversation?.themeId ?? null) : selectedThemeId;
   const activeTheme = activeThemeId ? getThemeById(activeThemeId) : null;
 
-  const { sendMessage, isLoading } = useChat(conversationId ?? null);
+  const { sendMessage, retryMessage, isLoading } = useChat(conversationId ?? null);
   const router = useRouter();
+  const isSendingRef = useRef(false);
 
-  // Quand on est dans une conversation existante, changer la thématique met à jour
-  // la conversation. Sur l'écran d'accueil ça met à jour selectedThemeId.
   const handleThemeChange = (themeId: string | null) => {
     if (conversationId) {
       updateConversationTheme(conversationId, themeId);
@@ -50,12 +50,18 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
   };
 
   const handleSend = async (message: string) => {
-    let convId = conversationId;
-    if (!convId) {
-      convId = createConversation(selectedThemeId);
-      router.push(`/chat/${convId}`);
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
+    try {
+      let convId = conversationId;
+      if (!convId) {
+        convId = createConversation(selectedThemeId);
+        router.push(`/chat/${convId}`);
+      }
+      await sendMessage(message, convId);
+    } finally {
+      isSendingRef.current = false;
     }
-    await sendMessage(message, convId);
   };
 
   const hasMessages = (conversation?.messages.length ?? 0) > 0;
@@ -77,7 +83,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
             className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors"
             aria-label="Ouvrir le menu"
           >
-            <Icon icon="mdi:menu" className="text-xl" />
+            <Icon icon="mynaui:menu" className="text-xl" />
           </button>
         </div>
       )}
@@ -86,7 +92,7 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
 
       {!hasMessages ? (
         <div className="flex-1 flex flex-col items-center justify-center px-8 py-10">
-          <WelcomeScreen onSelectQuestion={handleSend} />
+          <WelcomeScreen />
           <div className="w-full max-w-3xl mt-8">
             {activeThemeId && (
               <SuggestedQuestions themeId={activeThemeId} onSelect={handleSend} />
@@ -101,7 +107,11 @@ export default function ChatWindow({ conversationId }: ChatWindowProps) {
         </div>
       ) : (
         <>
-          <MessageList messages={conversation!.messages} isLoading={isLoading} />
+          <MessageList
+            messages={conversation?.messages ?? []}
+            isLoading={isLoading}
+            onRetry={(content, msgId) => retryMessage(content, msgId, conversationId)}
+          />
           <MessageInput
             selectedThemeId={activeThemeId}
             onThemeChange={handleThemeChange}

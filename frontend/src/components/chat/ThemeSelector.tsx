@@ -26,9 +26,23 @@ export default function ThemeSelector({
 
   // Charger les thématiques depuis le backend au montage
   useEffect(() => {
+    let isMounted = true;
     fetchThemes()
-      .then((topics) => { if (topics.length > 0) setBackendTopics(topics); })
+      .then((topics) => {
+        if (!isMounted || topics.length === 0) return;
+        const localOrder = HEALTH_THEMES.map((t) => t.id);
+        const sorted = [...topics].sort((a, b) => {
+          const ia = localOrder.indexOf(a.id);
+          const ib = localOrder.indexOf(b.id);
+          if (ia === -1 && ib === -1) return 0;
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        });
+        setBackendTopics(sorted);
+      })
       .catch(() => {}); // garder les thèmes locaux en cas d'erreur
+    return () => { isMounted = false; };
   }, []);
 
   // Nom à afficher pour la thématique sélectionnée
@@ -60,8 +74,8 @@ export default function ThemeSelector({
         className={cn(
           "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-all duration-150",
           isOpen
-            ? "bg-[#1CABE2] text-white"
-            : "text-gray-700 hover:bg-blue-50 hover:text-[#1CABE2] dark:text-white/72 dark:hover:bg-white/8 dark:hover:text-white"
+            ? "bg-gray-200 text-gray-900 dark:bg-white/15 dark:text-white"
+            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-white/72 dark:hover:bg-white/8 dark:hover:text-white"
         )}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -72,17 +86,17 @@ export default function ThemeSelector({
 
       {/* Tag de la thématique sélectionnée */}
       {selectedName && (
-        <div className="group flex items-center gap-1 rounded-full px-2 py-1 text-sm font-medium text-[#1CABE2] transition-all duration-150 hover:bg-blue-50 dark:text-[#7fd5ff] dark:hover:bg-[#1CABE2]/10">
+        <div className="group flex items-center gap-1 rounded-full px-2 py-1 text-sm font-medium text-gray-900 transition-all duration-150 hover:bg-gray-100 dark:text-white dark:hover:bg-white/10">
           {selectedName}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onThemeSelect(null);
             }}
-            className="ml-0.5 rounded-full p-0.5 text-[#1CABE2] transition-all duration-150 hover:bg-blue-100 hover:text-[#1CABE2] dark:text-[#7fd5ff] dark:hover:bg-white/10 dark:hover:text-white"
+            className="ml-0.5 rounded-full p-0.5 text-gray-600 transition-all duration-150 hover:bg-gray-200 hover:text-gray-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label="Supprimer la thématique"
           >
-            <Icon icon="mdi:close" className="text-xs" />
+            <Icon icon="mynaui:x" className="text-xs" />
           </button>
         </div>
       )}

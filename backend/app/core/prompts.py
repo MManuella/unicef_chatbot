@@ -49,9 +49,6 @@ Instructions STRICTES :
 
 # ============================================================
 # 3. TOPIC STARTERS (comme PhiloGPT)
-
-# ============================================================
-# 3. TOPIC STARTERS (comme PhiloGPT)
 # Chaque thématique a un message d'introduction que l'IA
 # envoie quand l'utilisateur clique sur un sujet.
 # C'est ce qui permet à l'IA de "lancer" une discussion.

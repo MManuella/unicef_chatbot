@@ -1,3 +1,8 @@
+# Auto-generated lockfile (pip freeze). For direct deps only, see requirements.in.
+# NOTE: cuda-*, nvidia-*, triton packages below are GPU-only (torch GPU deps).
+# For CPU-only deployment (HF Spaces free tier), replace torch with the +cpu wheel:
+#   pip install torch==X.X.X+cpu --index-url https://download.pytorch.org/whl/cpu
+# and remove the cuda-* / nvidia-* / triton lines from this file.
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.5
 aiosignal==1.4.0

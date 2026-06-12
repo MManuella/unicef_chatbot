@@ -1,34 +1,113 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { sendMessageStream } from "@/lib/api";
 
-/**
- * useChat — orchestrates sending messages, handling loading/error states,
- * and updating the store with streaming support.
- */
 export function useChat(conversationId: string | null) {
   const { addMessage, updateMessage, selectedThemeId, conversations } =
     useChatStore();
   const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Annuler tout stream en cours au démontage du composant
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  const retryMessage = useCallback(
+    async (userContent: string, assistantMessageId: string, targetConversationId?: string) => {
+      const convId = targetConversationId ?? conversationId;
+      if (!convId) return;
+
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      const conversation = conversations.find((c) => c.id === convId);
+      const themeId = conversation?.themeId ?? selectedThemeId;
+
+      // Remettre le message assistant en état loading sans le recréer
+      updateMessage(convId, assistantMessageId, {
+        content: "",
+        isLoading: true,
+        sources: undefined,
+        error: undefined,
+        timestamp: new Date(),
+      });
+
+      setIsLoading(true);
+
+      try {
+        // Historique sans le message assistant qu'on remplace
+        const history = (conversation?.messages ?? [])
+          .filter((m) => m.id !== assistantMessageId)
+          .map((m) => ({ role: m.role, content: m.content }));
+
+        let accumulatedContent = "";
+
+        await sendMessageStream(
+          { message: userContent, themeId, conversationId: convId, history },
+          (token: string) => {
+            accumulatedContent += token;
+            updateMessage(convId, assistantMessageId, {
+              content: accumulatedContent,
+              isLoading: true,
+            });
+          },
+          (sources) => {
+            const stillExists = useChatStore
+              .getState()
+              .conversations.some((c) => c.id === convId);
+            if (!stillExists) return;
+            updateMessage(convId, assistantMessageId, {
+              content: accumulatedContent,
+              sources,
+              isLoading: false,
+              timestamp: new Date(),
+            });
+            setIsLoading(false);
+          },
+          controller.signal,
+        );
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          setIsLoading(false);
+          return;
+        }
+        updateMessage(convId, assistantMessageId, {
+          content: accumulatedContent || "",
+          isLoading: false,
+          error: error instanceof Error ? error.message : "Une erreur est survenue. Veuillez réessayer.",
+          timestamp: new Date(),
+        });
+        setIsLoading(false);
+      }
+    },
+    [conversationId, conversations, selectedThemeId, updateMessage]
+  );
 
   const sendMessage = useCallback(
     async (content: string, targetConversationId?: string) => {
       const convId = targetConversationId ?? conversationId;
       if (!convId) return;
 
+      // Annuler un éventuel stream précédent encore actif
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       const conversation = conversations.find((c) => c.id === convId);
       const themeId = conversation?.themeId ?? selectedThemeId;
 
-      // 1. Add the user message immediately
       addMessage(convId, {
         role: "user",
         content,
         timestamp: new Date(),
       });
 
-      // 2. Add a loading placeholder for the assistant
       const loadingId = addMessage(convId, {
         role: "assistant",
         content: "",
@@ -39,7 +118,6 @@ export function useChat(conversationId: string | null) {
       setIsLoading(true);
 
       try {
-        // 3. Call the streaming API
         const history =
           conversation?.messages.map((m) => ({
             role: m.role,
@@ -49,22 +127,20 @@ export function useChat(conversationId: string | null) {
         let accumulatedContent = "";
 
         await sendMessageStream(
-          {
-            message: content,
-            themeId,
-            conversationId: convId,
-            history,
-          },
-          // onChunk: ajouter chaque token reçu
+          { message: content, themeId, conversationId: convId, history },
           (token: string) => {
             accumulatedContent += token;
             updateMessage(convId, loadingId, {
               content: accumulatedContent,
-              isLoading: true, // toujours en loading pendant le stream
+              isLoading: true,
             });
           },
-          // onComplete: marquer comme terminé
           (sources, _conversationId) => {
+            // Vérifier que la conversation existe encore avant de mettre à jour
+            const stillExists = useChatStore
+              .getState()
+              .conversations.some((c) => c.id === convId);
+            if (!stillExists) return;
             updateMessage(convId, loadingId, {
               content: accumulatedContent,
               sources,
@@ -72,17 +148,22 @@ export function useChat(conversationId: string | null) {
               timestamp: new Date(),
             });
             setIsLoading(false);
-          }
+          },
+          controller.signal,
         );
       } catch (error) {
-        // 4. Update the placeholder with an error
+        // Ne pas afficher d'erreur si c'est une annulation volontaire
+        if (error instanceof Error && error.name === "AbortError") {
+          setIsLoading(false);
+          return;
+        }
         updateMessage(convId, loadingId, {
-          content: "",
+          content: accumulatedContent || "",
           isLoading: false,
           error:
             error instanceof Error
               ? error.message
-              : "An error occurred. Please try again.",
+              : "Une erreur est survenue. Veuillez réessayer.",
           timestamp: new Date(),
         });
         setIsLoading(false);
@@ -91,5 +172,5 @@ export function useChat(conversationId: string | null) {
     [conversationId, conversations, selectedThemeId, addMessage, updateMessage]
   );
 
-  return { sendMessage, isLoading };
+  return { sendMessage, retryMessage, isLoading };
 }

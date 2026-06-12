@@ -3,10 +3,10 @@
 
 /* ─── CSS Custom Properties ─────────────────────────────────────────────────── */
 :root {
-  --background: hsl(210, 18%, 96%);
-  --foreground: hsl(217, 12%, 60%);
-  --sidebar-bg: hsl(210, 18%, 96%);
-  --muted-bg: hsl(220, 13%, 94%);
+  --background: hsl(180, 5%, 97%);
+  --foreground: hsl(0, 0%, 90%);
+  --sidebar-bg: hsl(222, 71%, 95%);
+  --muted-bg: hsl(220, 13%, 88%);
   --muted-fg: hsl(220, 9%, 46%);
   --border-color: hsl(220, 13%, 91%);
   --primary: hsl(199, 88%, 48%);
@@ -34,7 +34,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-fg);
   --color-destructive: var(--destructive);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-mulish);
   --font-mono: var(--font-ibm-plex-mono);
 }
 

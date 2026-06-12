@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import { useChatStore } from "@/store/chatStore";
 import { getThemeById } from "@/lib/themes";
+import { RenameDialog, DeleteConfirmDialog } from "@/components/ui/ConversationDialogs";
 
 interface HeaderProps {
   conversationId?: string;
@@ -43,7 +44,6 @@ export default function Header({ conversationId }: HeaderProps) {
   // --- Renommer ---
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const conversation = conversationId
     ? conversations.find((c) => c.id === conversationId)
@@ -74,12 +74,8 @@ export default function Header({ conversationId }: HeaderProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen, actionsOpen]);
 
-  // Focus input renommage à l'ouverture
   useEffect(() => {
-    if (renameOpen) {
-      setRenameValue(conversation?.title ?? "");
-      setTimeout(() => renameInputRef.current?.select(), 50);
-    }
+    if (renameOpen) setRenameValue(conversation?.title ?? "");
   }, [renameOpen, conversation?.title]);
 
   const openMenu = () => {
@@ -102,11 +98,20 @@ export default function Header({ conversationId }: HeaderProps) {
     if (navigator.share) {
       try {
         await navigator.share({ title: conversation?.title ?? "Discussion", url });
-      } catch (_) { /* user cancelled */ }
+      } catch (_) {
+        // annulé par l'utilisateur ou non supporté — fallback clipboard
+        try {
+          await navigator.clipboard.writeText(url);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        } catch (_) {}
+      }
     } else {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (_) {}
     }
   };
 
@@ -128,7 +133,8 @@ export default function Header({ conversationId }: HeaderProps) {
   // Style de positionnement du dropdown titre
   const menuStyle: React.CSSProperties = {
     top: menuPos.top,
-    ...(menuPos.right !== undefined ? { right: menuPos.right } : { left: menuPos.left }),
+    ...(menuPos.right !== undefined && { right: menuPos.right }),
+    ...(menuPos.left !== undefined && { left: menuPos.left }),
   };
 
   return (
@@ -139,38 +145,27 @@ export default function Header({ conversationId }: HeaderProps) {
         className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors flex-shrink-0"
         aria-label="Ouvrir le menu"
       >
-        <Icon icon="mdi:menu" className="text-xl" />
+        <Icon icon="mynaui:menu" className="text-xl" />
       </button>
 
-      {/* Titre + badge thème + chevron */}
-      <div className="flex flex-col min-w-0 flex-1 justify-center gap-0.5">
-        <div className="flex items-center min-w-0 gap-1">
-          <h1 className="truncate min-w-0 shrink text-sm font-semibold tracking-[-0.02em] text-gray-700 dark:text-white/88">
-            {conversation?.title ?? ""}
-          </h1>
-          <button
-            ref={menuBtnRef}
-            onClick={openMenu}
-            className={[
-              "flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150",
-              menuOpen
-                ? "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-white"
-                : "text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-white/50 dark:hover:bg-white/8 dark:hover:text-white",
-            ].join(" ")}
-            aria-label="Afficher les actions"
-          >
-            <Icon icon="mdi:chevron-down" className="text-base" />
-          </button>
-        </div>
-        {theme && (
-          <span
-            className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full w-fit leading-none"
-            style={{ color: theme.color, backgroundColor: `${theme.color}18` }}
-          >
-            <Icon icon={theme.icon} className="text-[10px]" />
-            {theme.name}
-          </span>
-        )}
+      {/* Titre + chevron */}
+      <div className="flex items-center min-w-0 flex-1 gap-1">
+        <h1 className="truncate min-w-0 shrink text-sm font-semibold tracking-[-0.02em] text-gray-900 dark:text-white">
+          {conversation?.title ?? ""}
+        </h1>
+        <button
+          ref={menuBtnRef}
+          onClick={openMenu}
+          className={[
+            "flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full transition-all duration-150",
+            menuOpen
+              ? "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-white"
+              : "text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-white/50 dark:hover:bg-white/8 dark:hover:text-white",
+          ].join(" ")}
+          aria-label="Afficher les actions"
+        >
+          <Icon icon="mynaui:chevron-down" className="text-base" />
+        </button>
       </div>
 
       {/* Dropdown titre — portal */}
@@ -182,30 +177,30 @@ export default function Header({ conversationId }: HeaderProps) {
         >
           <button
             onClick={() => { handleShare(); setMenuOpen(false); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-white/82 dark:hover:bg-white/8"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-200/60 dark:text-white/82 dark:hover:bg-white/10"
           >
-            <Icon icon="mdi:share-variant-outline" className="text-base text-gray-400 dark:text-white/45" />
+            <Icon icon="mynaui:share" className="text-base text-gray-700 dark:text-white/70" />
             Partager
           </button>
           <button
             onClick={() => { toggleSaveConversation(conversationId); setMenuOpen(false); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-white/82 dark:hover:bg-white/8"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-200/60 dark:text-white/82 dark:hover:bg-white/10"
           >
-            <Icon icon={isPinned ? "mdi:pin-off-outline" : "mdi:pin-outline"} className="text-base text-gray-400 dark:text-white/45" />
+            <Icon icon={isPinned ? "mynaui:pin-solid" : "mynaui:pin"} className="text-base text-gray-700 dark:text-white/70" />
             {isPinned ? "Désépingler" : "Épingler"}
           </button>
           <button
             onClick={() => { setMenuOpen(false); setRenameOpen(true); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-white/82 dark:hover:bg-white/8"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-200/60 dark:text-white/82 dark:hover:bg-white/10"
           >
-            <Icon icon="mdi:pencil-outline" className="text-base text-gray-400 dark:text-white/45" />
+            <Icon icon="mynaui:edit" className="text-base text-gray-700 dark:text-white/70" />
             Renommer
           </button>
           <button
             onClick={() => { setMenuOpen(false); setDeleteOpen(true); }}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
           >
-            <Icon icon="mdi:trash-can-outline" className="text-base" />
+            <Icon icon="mynaui:trash" className="text-base" />
             Supprimer
           </button>
         </div>,
@@ -217,17 +212,15 @@ export default function Header({ conversationId }: HeaderProps) {
         {allSources.length > 0 && (
           <button
             onClick={() => openSourcesPanel(allSources)}
-            className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-0.5 text-[10px] text-gray-500 transition-all hover:border-[#1CABE2]/50 hover:text-[#1CABE2] dark:border-white/15 dark:text-white/55 dark:hover:border-[#1CABE2]/40 dark:hover:text-white"
+            className="rounded-xl border border-gray-200 px-3 py-1 text-[10px] font-medium text-gray-900 transition-all hover:border-[#1CABE2]/50 hover:text-[#1CABE2] dark:border-white/15 dark:text-white dark:hover:border-[#1CABE2]/40"
           >
-            <Icon icon="mdi:book-open-outline" className="text-[10px]" />
             Sources
           </button>
         )}
         <button
           onClick={handleShare}
-          className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-0.5 text-[10px] text-gray-500 transition-all hover:border-[#1CABE2]/50 hover:text-[#1CABE2] dark:border-white/15 dark:text-white/55 dark:hover:border-[#1CABE2]/40 dark:hover:text-white"
+          className="rounded-xl border border-gray-200 px-3 py-1 text-[10px] font-medium text-gray-900 transition-all hover:border-[#1CABE2]/50 hover:text-[#1CABE2] dark:border-white/15 dark:text-white dark:hover:border-[#1CABE2]/40"
         >
-          <Icon icon={copied ? "mdi:check" : "mdi:share-variant-outline"} className="text-[10px]" />
           {copied ? "Copié !" : "Partager"}
         </button>
       </div>
@@ -245,7 +238,7 @@ export default function Header({ conversationId }: HeaderProps) {
           ].join(" ")}
           aria-label="Plus d'actions"
         >
-          <Icon icon="mdi:dots-vertical" className="text-lg" />
+          <Icon icon="mynaui:dots-vertical" className="text-lg" />
         </button>
       </div>
 
@@ -259,99 +252,36 @@ export default function Header({ conversationId }: HeaderProps) {
           {allSources.length > 0 && (
             <button
               onClick={() => { openSourcesPanel(allSources); setActionsOpen(false); }}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-white/82 dark:hover:bg-white/8"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-200/60 dark:text-white/82 dark:hover:bg-white/10"
             >
-              <Icon icon="mdi:book-open-outline" className="text-base text-gray-400 dark:text-white/45" />
+              <Icon icon="mynaui:book-open" className="text-base text-gray-700 dark:text-white/70" />
               Sources
             </button>
           )}
           <button
             onClick={() => { handleShare(); setActionsOpen(false); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-white/82 dark:hover:bg-white/8"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-200/60 dark:text-white/82 dark:hover:bg-white/10"
           >
-            <Icon icon={copied ? "mdi:check" : "mdi:share-variant-outline"} className="text-base text-gray-400 dark:text-white/45" />
+            <Icon icon={copied ? "mynaui:check" : "mynaui:share"} className="text-base text-gray-700 dark:text-white/70" />
             {copied ? "Copié !" : "Partager"}
           </button>
         </div>,
         document.body
       )}
 
-      {/* Modal Confirmation Suppression */}
-      {deleteOpen && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
-            onClick={() => setDeleteOpen(false)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0f1a28]">
-            <div className="flex items-center gap-2 mb-2">
-              <Icon icon="mdi:trash-can-outline" className="text-red-500 text-lg" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">Supprimer la discussion ?</h2>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-white/55 mb-5">Cette action est irréversible.</p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setDeleteOpen(false)}
-                className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDelete}
-                className="rounded-xl bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 transition-colors"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
+      <DeleteConfirmDialog
+        open={deleteOpen}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteOpen(false)}
+      />
 
-      {/* Modal Renommer */}
-      {renameOpen && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
-            onClick={() => setRenameOpen(false)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0f1a28]">
-            <div className="flex items-center gap-2 mb-4">
-              <Icon icon="mdi:pencil-outline" className="text-[#1CABE2] text-lg" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">Renommer la discussion</h2>
-            </div>
-            <input
-              ref={renameInputRef}
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRenameSubmit();
-                if (e.key === "Escape") setRenameOpen(false);
-              }}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-[#1CABE2] focus:ring-2 focus:ring-[#1CABE2]/20 dark:border-white/10 dark:bg-white/6 dark:text-white dark:focus:border-[#1CABE2]/60"
-              placeholder="Nom de la discussion"
-              autoComplete="off"
-            />
-            <div className="flex gap-2 mt-4 justify-end">
-              <button
-                onClick={() => setRenameOpen(false)}
-                className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleRenameSubmit}
-                disabled={!renameValue.trim()}
-                className="rounded-xl bg-[#1CABE2] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d8bbf] disabled:opacity-40 transition-colors"
-              >
-                Renommer
-              </button>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
+      <RenameDialog
+        open={renameOpen}
+        value={renameValue}
+        onChange={setRenameValue}
+        onSubmit={handleRenameSubmit}
+        onClose={() => setRenameOpen(false)}
+      />
     </header>
   );
 }

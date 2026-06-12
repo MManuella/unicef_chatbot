@@ -8,9 +8,10 @@ import MessageItem from "./MessageItem";
 interface MessageListProps {
   messages: Message[];
   isLoading?: boolean;
+  onRetry?: (userContent: string, assistantMessageId: string) => void;
 }
 
-export default function MessageList({ messages, isLoading }: MessageListProps) {
+export default function MessageList({ messages, isLoading, onRetry }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const { openSourcesPanel } = useChatStore();
 
@@ -25,13 +26,20 @@ export default function MessageList({ messages, isLoading }: MessageListProps) {
       aria-label="Messages"
     >
       <div className="max-w-3xl mx-auto space-y-8">
-        {messages.map((message) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            onViewSources={(sources: Source[]) => openSourcesPanel(sources)}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const prevUserMessage =
+            message.role === "assistant"
+              ? messages.slice(0, index).reverse().find((m) => m.role === "user")
+              : null;
+          return (
+            <MessageItem
+              key={message.id}
+              message={message}
+              onViewSources={(sources: Source[]) => openSourcesPanel(sources)}
+              onRetry={prevUserMessage && onRetry ? () => onRetry(prevUserMessage.content, message.id) : undefined}
+            />
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </div>

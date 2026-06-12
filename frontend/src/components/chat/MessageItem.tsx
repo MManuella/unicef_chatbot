@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { Message, Source } from "@/lib/types";
-import { copyToClipboard } from "@/lib/utils";
+import { copyToClipboard, cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
 interface MessageItemProps {
   message: Message;
   onViewSources: (sources: Source[]) => void;
+  onRetry?: () => void;
 }
 
 function cleanContent(text: string): string {
@@ -20,8 +21,9 @@ function cleanContent(text: string): string {
     .trim();
 }
 
-export default function MessageItem({ message, onViewSources }: MessageItemProps) {
+export default function MessageItem({ message, onViewSources, onRetry }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const isUser = message.role === "user";
 
   const handleCopy = async () => {
@@ -45,7 +47,7 @@ export default function MessageItem({ message, onViewSources }: MessageItemProps
   if (isUser) {
     return (
       <div className="flex justify-end msg-appear">
-        <div className="max-w-[72%] rounded-2xl bg-gray-200 px-4 py-3 text-sm leading-relaxed text-gray-800 dark:bg-white/12 dark:text-white/92 dark:backdrop-blur-sm">
+        <div className="max-w-[72%] rounded-2xl bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-800 dark:bg-white/12 dark:text-white/92 dark:backdrop-blur-sm">
           {message.content}
         </div>
       </div>
@@ -58,7 +60,7 @@ export default function MessageItem({ message, onViewSources }: MessageItemProps
         <div className="flex items-center gap-1.5 py-2 px-1">
           {[0, 1, 2].map((i) => (
             <span
-              key={i}
+              key={`dot-${i}`}
               className="w-2 h-2 rounded-full bg-[#1CABE2]/60 dot-bounce"
               style={{ animationDelay: `${i * 0.18}s` }}
             />
@@ -96,25 +98,63 @@ export default function MessageItem({ message, onViewSources }: MessageItemProps
         </div>
 
         {/* Boutons action */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {message.sources && message.sources.length > 0 && (
             <button
               onClick={() => onViewSources(message.sources!)}
               className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-0.5 text-[10px] text-gray-500 transition-all duration-150 hover:border-[#1CABE2]/40 hover:bg-blue-50 hover:text-[#1CABE2] dark:border-white/12 dark:text-white/68 dark:hover:bg-[#1CABE2]/10 dark:hover:text-white"
             >
-              <Icon icon="mdi:plus" className="text-[10px]" />
+              <Icon icon="mynaui:plus" className="text-[10px]" />
               Sources
             </button>
           )}
           {!isEmptyOrError && (
-            <button
-              onClick={handleCopy}
-              title={copied ? "Copié !" : "Copier"}
-              className="rounded-lg p-1.5 text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/8 dark:hover:text-white"
-              aria-label="Copier"
-            >
-              <Icon icon={copied ? "mdi:check" : "mdi:content-copy"} className="text-sm" />
-            </button>
+            <>
+              <button
+                onClick={handleCopy}
+                title={copied ? "Copié !" : "Copier"}
+                className="rounded-lg p-1.5 text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/8 dark:hover:text-white"
+                aria-label="Copier"
+              >
+                <Icon icon={copied ? "mynaui:check" : "mynaui:copy"} className="text-sm" />
+              </button>
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  title="Relancer"
+                  className="rounded-lg p-1.5 text-gray-400 transition-all duration-150 hover:bg-gray-100 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/8 dark:hover:text-white"
+                  aria-label="Relancer la question"
+                >
+                  <Icon icon="mynaui:refresh" className="text-sm" />
+                </button>
+              )}
+              <button
+                onClick={() => setFeedback(feedback === "up" ? null : "up")}
+                title="Bonne réponse"
+                className={cn(
+                  "rounded-lg p-1.5 transition-all duration-150",
+                  feedback === "up"
+                    ? "text-[#1CABE2]"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/8 dark:hover:text-white"
+                )}
+                aria-label="Bonne réponse"
+              >
+                <Icon icon={feedback === "up" ? "mynaui:like-solid" : "mynaui:like"} className="text-sm" />
+              </button>
+              <button
+                onClick={() => setFeedback(feedback === "down" ? null : "down")}
+                title="Mauvaise réponse"
+                className={cn(
+                  "rounded-lg p-1.5 transition-all duration-150",
+                  feedback === "down"
+                    ? "text-red-500"
+                    : "text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-white/45 dark:hover:bg-white/8 dark:hover:text-white"
+                )}
+                aria-label="Mauvaise réponse"
+              >
+                <Icon icon={feedback === "down" ? "mynaui:dislike-solid" : "mynaui:dislike"} className="text-sm" />
+              </button>
+            </>
           )}
         </div>
       </div>

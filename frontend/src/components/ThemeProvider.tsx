@@ -24,16 +24,10 @@ export default function ThemeProvider({
     root.style.colorScheme = isDark ? "dark" : "light";
   };
 
-  // Appliquer le thème au premier rendu ET à chaque changement
+  // Applique le thème au montage et à chaque changement
   useEffect(() => {
     applyTheme(themeMode);
   }, [themeMode]);
-
-  // S'assurer que le thème est appliqué immédiatement au montage
-  useEffect(() => {
-    const initialTheme = useChatStore.getState().ui.themeMode;
-    applyTheme(initialTheme);
-  }, []);
 
   return <>{children}</>;
 }

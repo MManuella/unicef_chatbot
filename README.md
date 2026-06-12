@@ -1,5 +1,5 @@
 ---
-title: UNICEF Advisory Chatbot
+title: UNICEF Chatbot
 colorFrom: blue
 colorTo: blue
 sdk: docker

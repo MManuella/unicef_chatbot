@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
+import { RenameDialog, DeleteConfirmDialog } from "@/components/ui/ConversationDialogs";
+import type { Conversation } from "@/lib/types";
 
 /** Truncate a conversation title for display (max 32 chars, word boundary) */
 function truncDisplay(title: string, max = 32): string {
@@ -35,23 +37,23 @@ function SidebarCollapsed({
       {/* Top icons */}
       <div className="flex flex-col items-center gap-1 flex-1">
         <StripBtn
-          icon="mdi:forwardburger"
+          icon="mynaui:sidebar"
           label="Expand sidebar"
           onClick={toggleSidebar}
         />
         <StripBtn
-          icon="mdi:plus"
+          icon="mynaui:plus"
           label="New discussion"
           onClick={handleNewConversation}
           isActive={pathname === "/"}
         />
         <StripBtn
-          icon="mdi:magnify"
+          icon="mynaui:search"
           label="Search"
           onClick={onOpenSearch}
         />
         <StripBtn
-          icon="mdi:chat-outline"
+          icon="mynaui:chat"
           label="Discussions"
           onClick={toggleSidebar}
         />
@@ -59,17 +61,17 @@ function SidebarCollapsed({
 
       {/* Bottom icons */}
       <div className="flex flex-col items-center gap-1">
-        <StripBtn icon="mdi:account-outline" label="Profile" />
+        <StripBtn icon="mynaui:user" label="Profile" />
         <StripBtn
           icon={
             ui.themeMode === "dark"
-              ? "mdi:weather-sunny"
-              : "mdi:weather-night"
+              ? "mynaui:sun"
+              : "mynaui:moon"
           }
           label="Toggle theme"
           onClick={toggleThemeMode}
         />
-        <StripBtn icon="mdi:cog-outline" label="Settings" />
+        <StripBtn icon="mynaui:cog" label="Settings" />
       </div>
     </aside>
   );
@@ -103,6 +105,58 @@ function StripBtn({
   );
 }
 
+// ─── Conversation item ────────────────────────────────────────────────────────
+function ConversationItem({
+  conv,
+  isActive,
+  menuOpenId,
+  onSelect,
+  onMenu,
+  onRename,
+}: {
+  conv: Conversation;
+  isActive: boolean;
+  menuOpenId: string | null;
+  onSelect: () => void;
+  onMenu: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onRename: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
+        isActive
+          ? "bg-gray-200/70 dark:bg-blue-900/20"
+          : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
+      )}
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onSelect(); }}
+    >
+      <p
+        className={cn("flex-1 text-[13px] truncate text-gray-800 transition-colors dark:text-white/88", isActive && "font-bold text-gray-900 dark:text-white")}
+        title={conv.title}
+        onDoubleClick={(e) => { e.stopPropagation(); onRename(); }}
+      >
+        {truncDisplay(conv.title)}
+      </p>
+      <button
+        onClick={onMenu}
+        className={cn(
+          "flex-shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-gray-700 transition-all hover:bg-gray-300/80 hover:text-gray-900 dark:text-white/70 dark:hover:bg-white/15 dark:hover:text-white",
+          menuOpenId === conv.id
+            ? "opacity-100 bg-gray-300/80 dark:bg-white/15"
+            : "opacity-0 group-hover:opacity-100"
+        )}
+        aria-label="Options"
+      >
+        <Icon icon="mynaui:dots" className="text-base" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Full expanded sidebar ────────────────────────────────────────────────────
 function SidebarExpanded({
   onOpenSearch,
@@ -130,7 +184,6 @@ function SidebarExpanded({
   const menuRef = useRef<HTMLDivElement>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -147,10 +200,7 @@ function SidebarExpanded({
     };
   }, [menuOpenId]);
 
-  const filtered = conversations.filter((c) => {
-    if (c.messages.length === 0) return false; // masquer les discussions vides
-    return true;
-  });
+  const filtered = conversations.filter((c) => c.messages.length > 0);
 
   const pinnedConversations = filtered.filter((c) => c.isSaved);
   const regularConversations = filtered.filter((c) => !c.isSaved);
@@ -163,12 +213,10 @@ function SidebarExpanded({
     setMenuOpenId(id);
   };
 
-  // Focus input renommage à l'ouverture
   useEffect(() => {
     if (renameId) {
       const conv = conversations.find((c) => c.id === renameId);
       setRenameValue(conv?.title ?? "");
-      setTimeout(() => renameInputRef.current?.select(), 50);
     }
   }, [renameId, conversations]);
 
@@ -201,20 +249,26 @@ function SidebarExpanded({
   return (
     <aside className="flex h-full w-64 flex-col bg-transparent text-[color:var(--foreground)] dark:text-white/78 flex-shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#1CABE2] flex items-center justify-center">
-            <Icon icon="mdi:heart-pulse" className="text-white text-sm" />
-          </div>
-          <span className="font-bold text-[#1CABE2] text-base">UniSanté</span>
+      <div className="flex items-center justify-between px-3 py-3">
+        <div className="flex items-center gap-2 pl-3">
+          <span className="font-bold text-gray-900 text-xl dark:text-white">U-Assistant</span>
         </div>
-        <button
-          onClick={toggleSidebar}
-          className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-white/60 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-          aria-label="Collapse sidebar"
-        >
-          <Icon icon="mdi:backburger" className="text-[18px]" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={onOpenSearch}
+            className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-white/60 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+            aria-label="Rechercher"
+          >
+            <Icon icon="mynaui:search" className="text-[18px]" />
+          </button>
+          <button
+            onClick={toggleSidebar}
+            className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-white/60 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+            aria-label="Réduire la sidebar"
+          >
+            <Icon icon="mynaui:sidebar" className="text-[18px]" />
+          </button>
+        </div>
       </div>
 
       {/* New discussion */}
@@ -222,25 +276,21 @@ function SidebarExpanded({
         <button
           onClick={() => { setSelectedTheme(null); router.push("/"); }}
           className={cn(
-            "flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition-all duration-200",
+            "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200",
             pathname === "/"
-              ? "border-blue-100 bg-white/70 text-[#1CABE2] dark:border-blue-800/30 dark:bg-blue-900/20"
-              : "border-transparent text-gray-800 hover:border-blue-100 hover:bg-white/70 hover:text-[#1CABE2] dark:text-gray-200 dark:hover:border-blue-800/30 dark:hover:bg-blue-900/20"
+              ? "bg-gray-200/70 text-gray-900 dark:bg-white/10 dark:text-white"
+              : "text-gray-800 hover:bg-gray-200/70 dark:text-gray-200 dark:hover:bg-white/10"
           )}
         >
-          <Icon icon="mdi:plus" className={cn("text-base", pathname === "/" ? "text-[#1CABE2]" : "text-gray-400")} />
+          <span className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-full flex-shrink-0 transition-colors",
+            pathname === "/"
+              ? "bg-gray-200 text-gray-900 dark:bg-white/12 dark:text-white"
+              : "bg-gray-200 text-gray-900 dark:bg-white/12 dark:text-white"
+          )}>
+            <Icon icon="mynaui:plus" className="text-sm" />
+          </span>
           Nouvelle discussion
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-3 pt-1">
-        <button
-          onClick={onOpenSearch}
-          className="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2.5 text-sm text-gray-800 transition-all duration-200 hover:border-blue-100 hover:bg-white/70 hover:text-[#1CABE2] dark:text-gray-200 dark:hover:border-blue-800/30 dark:hover:bg-blue-900/20"
-        >
-          <Icon icon="mdi:magnify" className="text-base text-gray-400" />
-          Rechercher
         </button>
       </div>
 
@@ -252,44 +302,17 @@ function SidebarExpanded({
               Épinglées
             </p>
           )}
-          {pinnedConversations.map((conv) => {
-            const isActive = conv.id === activeConversationId && pathname !== "/";
-            return (
-              <div
-                key={conv.id}
-                className={cn(
-                  "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
-                  isActive
-                    ? "bg-gray-200/70 dark:bg-blue-900/20"
-                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
-                )}
-                onClick={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter") { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); } }}
-              >
-                <p
-                  className={cn("flex-1 text-[13px] truncate text-gray-800 transition-colors dark:text-white/88", isActive && "font-semibold text-gray-900 dark:text-white")}
-                  title={conv.title}
-                  onDoubleClick={(e) => { e.stopPropagation(); openRename(conv.id); }}
-                >
-                  {truncDisplay(conv.title)}
-                </p>
-                <button
-                  onClick={(e) => openMenu(conv.id, e)}
-                  className={cn(
-                    "flex-shrink-0 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all",
-                    menuOpenId === conv.id
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
-                  )}
-                  aria-label="Options"
-                >
-                  <Icon icon="mdi:dots-horizontal" className="text-sm" />
-                </button>
-              </div>
-            );
-          })}
+          {pinnedConversations.map((conv) => (
+            <ConversationItem
+              key={conv.id}
+              conv={conv}
+              isActive={conv.id === activeConversationId && pathname !== "/"}
+              menuOpenId={menuOpenId}
+              onSelect={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
+              onMenu={(e) => openMenu(conv.id, e)}
+              onRename={() => openRename(conv.id)}
+            />
+          ))}
           {regularConversations.length > 0 && (
             <p className={cn(
               "px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500",
@@ -298,44 +321,17 @@ function SidebarExpanded({
               Récentes
             </p>
           )}
-          {regularConversations.map((conv) => {
-            const isActive = conv.id === activeConversationId && pathname !== "/";
-            return (
-              <div
-                key={conv.id}
-                className={cn(
-                  "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
-                  isActive
-                    ? "bg-gray-200/70 dark:bg-blue-900/20"
-                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
-                )}
-                onClick={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter") { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); } }}
-              >
-                <p
-                  className={cn("flex-1 text-[13px] truncate text-gray-800 transition-colors dark:text-white/88", isActive && "font-semibold text-gray-900 dark:text-white")}
-                  title={conv.title}
-                  onDoubleClick={(e) => { e.stopPropagation(); openRename(conv.id); }}
-                >
-                  {truncDisplay(conv.title)}
-                </p>
-                <button
-                  onClick={(e) => openMenu(conv.id, e)}
-                  className={cn(
-                    "flex-shrink-0 p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all",
-                    menuOpenId === conv.id
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
-                  )}
-                  aria-label="Options"
-                >
-                  <Icon icon="mdi:dots-horizontal" className="text-sm" />
-                </button>
-              </div>
-            );
-          })}
+          {regularConversations.map((conv) => (
+            <ConversationItem
+              key={conv.id}
+              conv={conv}
+              isActive={conv.id === activeConversationId && pathname !== "/"}
+              menuOpenId={menuOpenId}
+              onSelect={() => { setActiveConversation(conv.id); router.push(`/chat/${conv.id}`); }}
+              onMenu={(e) => openMenu(conv.id, e)}
+              onRename={() => openRename(conv.id)}
+            />
+          ))}
           {filtered.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-8">
               Aucune discussion
@@ -365,18 +361,6 @@ function SidebarExpanded({
         {/* Dark / Light toggle */}
         <div className="flex items-center gap-2 rounded-2xl bg-white/75 p-1.5 backdrop-blur-sm dark:bg-gray-800">
           <button
-            onClick={() => setThemeMode("dark")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all",
-              ui.themeMode === "dark"
-                ? "bg-gray-200 text-gray-800 shadow-sm dark:bg-gray-600 dark:text-gray-100"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-            )}
-          >
-            <Icon icon="mdi:weather-night" className="text-sm" />
-            Sombre
-          </button>
-          <button
             onClick={() => setThemeMode("light")}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all",
@@ -385,24 +369,36 @@ function SidebarExpanded({
                 : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
             )}
           >
-            <Icon icon="mdi:weather-sunny" className="text-sm" />
+            <Icon icon="mynaui:sun" className="text-sm" />
             Clair
+          </button>
+          <button
+            onClick={() => setThemeMode("dark")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all",
+              ui.themeMode === "dark"
+                ? "bg-gray-200 text-gray-800 shadow-sm dark:bg-gray-600 dark:text-gray-100"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+            )}
+          >
+            <Icon icon="mynaui:moon" className="text-sm" />
+            Sombre
           </button>
         </div>
       </div>
 
-      {/* Context menu — fixed positioned so it escapes overflow:auto */}
-      {menuOpenId && (
+      {/* Context menu — rendered via portal to escape stacking contexts */}
+      {menuOpenId && typeof document !== "undefined" && createPortal(
         <div
           ref={menuRef}
-          className="fixed z-50 w-48 rounded-2xl border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-700 dark:bg-[#1e2535]"
+          className="fixed z-[9999] w-48 rounded-2xl border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-700 dark:bg-[#1e2535]"
           style={{ top: menuPos.top, left: menuPos.left }}
         >
           <button
             onClick={() => setMenuOpenId(null)}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-900 transition-colors hover:bg-gray-200/60 dark:text-white dark:hover:bg-white/10"
           >
-            <Icon icon="mdi:share-variant-outline" className="text-base text-gray-400" />
+            <Icon icon="mynaui:share" className="text-base text-gray-700 dark:text-white/70" />
             Partager
           </button>
           <button
@@ -410,16 +406,16 @@ function SidebarExpanded({
               toggleSaveConversation(menuOpenId);
               setMenuOpenId(null);
             }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-900 transition-colors hover:bg-gray-200/60 dark:text-white dark:hover:bg-white/10"
           >
-            <Icon icon={menuConversation?.isSaved ? "mdi:pin-off-outline" : "mdi:pin-outline"} className="text-base text-gray-400" />
+            <Icon icon={menuConversation?.isSaved ? "mynaui:pin-solid" : "mynaui:pin"} className="text-base text-gray-700 dark:text-white/70" />
             {menuConversation?.isSaved ? "Désépingler" : "Épingler"}
           </button>
           <button
             onClick={() => handleRename(menuOpenId)}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-900 transition-colors hover:bg-gray-200/60 dark:text-white dark:hover:bg-white/10"
           >
-            <Icon icon="mdi:pencil-outline" className="text-base text-gray-400" />
+            <Icon icon="mynaui:edit" className="text-base text-gray-700 dark:text-white/70" />
             Renommer
           </button>
           <button
@@ -429,90 +425,26 @@ function SidebarExpanded({
             }}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
           >
-            <Icon icon="mdi:trash-can-outline" className="text-base" />
+            <Icon icon="mynaui:trash" className="text-base" />
             Supprimer
           </button>
-        </div>
-      )}
-
-      {/* Confirmation dialog */}
-      {confirmDeleteId && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-          onClick={() => setConfirmDeleteId(null)}
-        >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-2xl w-80 mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              Supprimer la discussion ?
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              Cette action est irréversible.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => handleDelete(confirmDeleteId)}
-                className="px-4 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-600 transition-colors"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Renommer */}
-      {renameId && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
-            onClick={() => setRenameId(null)}
-          />
-          <div className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0f1a28]">
-            <div className="flex items-center gap-2 mb-4">
-              <Icon icon="mdi:pencil-outline" className="text-[#1CABE2] text-lg" />
-              <h2 className="font-semibold text-gray-800 dark:text-white">Renommer la discussion</h2>
-            </div>
-            <input
-              ref={renameInputRef}
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRenameSubmit();
-                if (e.key === "Escape") setRenameId(null);
-              }}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-[#1CABE2] focus:ring-2 focus:ring-[#1CABE2]/20 dark:border-white/10 dark:bg-white/6 dark:text-white dark:focus:border-[#1CABE2]/60"
-              placeholder="Nom de la discussion"
-              autoComplete="off"
-            />
-            <div className="flex gap-2 mt-4 justify-end">
-              <button
-                onClick={() => setRenameId(null)}
-                className="rounded-xl px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-white/60 dark:hover:bg-white/8 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleRenameSubmit}
-                disabled={!renameValue.trim()}
-                className="rounded-xl bg-[#1CABE2] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d8bbf] disabled:opacity-40 transition-colors"
-              >
-                Renommer
-              </button>
-            </div>
-          </div>
-        </>,
+        </div>,
         document.body
       )}
+
+      <DeleteConfirmDialog
+        open={!!confirmDeleteId}
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+      />
+
+      <RenameDialog
+        open={!!renameId}
+        value={renameValue}
+        onChange={setRenameValue}
+        onSubmit={handleRenameSubmit}
+        onClose={() => setRenameId(null)}
+      />
     </aside>
   );
 }
@@ -564,7 +496,7 @@ function SearchDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 rounded-2xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-          <Icon icon="mdi:magnify" className="text-lg text-gray-400" />
+          <Icon icon="mynaui:search" className="text-lg text-gray-400" />
           <input
             ref={inputRef}
             type="text"
@@ -578,7 +510,7 @@ function SearchDialog({
             className="rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             aria-label="Fermer la recherche"
           >
-            <Icon icon="mdi:close" className="text-sm" />
+            <Icon icon="mynaui:x" className="text-sm" />
           </button>
         </div>
 
@@ -610,7 +542,7 @@ function SearchDialog({
                         {formatConversationDate(conversation.updatedAt)}
                       </p>
                     </div>
-                    <Icon icon="mdi:arrow-top-right" className="text-base text-gray-300" />
+                    <Icon icon="mynaui:arrow-up-right" className="text-base text-gray-300" />
                   </button>
                 );
               })}

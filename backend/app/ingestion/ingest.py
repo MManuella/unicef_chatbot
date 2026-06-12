@@ -20,7 +20,9 @@ Lancer le script :
     python -m app.ingestion.ingest
 """
 
+import argparse
 import os
+import sys
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
@@ -108,7 +110,7 @@ def chunk_documents(documents):
     return chunks
 
 
-def ingest():
+def ingest(force: bool = False):
     """Pipeline d'ingestion complet."""
     print("=" * 50)
     print("  INGESTION DES DOCUMENTS UNICEF")
@@ -152,6 +154,14 @@ def ingest():
     # → supprimer si elle existe, puis créer
     existing = [c.name for c in client.get_collections().collections]
     if settings.QDRANT_COLLECTION in existing:
+        if not force:
+            answer = input(
+                f"\n  La collection '{settings.QDRANT_COLLECTION}' existe déjà et sera supprimée.\n"
+                "  Continuer ? [y/N] "
+            ).strip().lower()
+            if answer != "y":
+                print("  Annulé.")
+                sys.exit(0)
         client.delete_collection(settings.QDRANT_COLLECTION)
 
     # Détecter la dimension automatiquement depuis le modèle
@@ -192,4 +202,11 @@ def ingest():
 
 
 if __name__ == "__main__":
-    ingest()
+    parser = argparse.ArgumentParser(description="Indexation des documents UNICEF dans Qdrant")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Supprimer la collection existante sans confirmation",
+    )
+    args = parser.parse_args()
+    ingest(force=args.force)

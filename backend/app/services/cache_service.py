@@ -19,14 +19,18 @@ Flux :
 """
 
 import logging
+from collections import OrderedDict
 import redis.asyncio as redis
 from app.core.config import settings
+
+_MEMORY_MAX_ENTRIES = 256
 
 
 class CacheService:
     def __init__(self):
         self._redis: redis.Redis | None = None
-        self._memory: dict[str, str] = {}
+        # Bounded LRU dict: prevents unbounded RAM growth when Redis is down.
+        self._memory: OrderedDict[str, str] = OrderedDict()
         try:
             self._redis = redis.from_url(
                 settings.REDIS_URL,
@@ -47,7 +51,10 @@ class CacheService:
                 return await self._redis.get(key)
             except Exception:
                 pass
-        return self._memory.get(key)
+        value = self._memory.get(key)
+        if value is not None:
+            self._memory.move_to_end(key)
+        return value
 
     async def set(self, key: str, value: str, ttl: int = None) -> None:
         """
@@ -63,6 +70,9 @@ class CacheService:
             except Exception:
                 pass
         self._memory[key] = value
+        self._memory.move_to_end(key)
+        if len(self._memory) > _MEMORY_MAX_ENTRIES:
+            self._memory.popitem(last=False)
 
     async def delete(self, key: str) -> None:
         """Supprime une valeur du cache (utile pour forcer un refresh)."""

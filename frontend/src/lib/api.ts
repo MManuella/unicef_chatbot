@@ -23,7 +23,8 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 export async function sendMessageStream(
   payload: ChatRequest,
   onChunk: (token: string) => void,
-  onComplete: (sources: Source[], conversationId: string) => void
+  onComplete: (sources: Source[], conversationId: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const response = await fetch(`${BASE_URL}/api/chat/stream`, {
     method: "POST",
@@ -34,6 +35,7 @@ export async function sendMessageStream(
       theme_id: payload.themeId,
       history: payload.history,
     }),
+    signal,
   });
 
   if (!response.ok) {
@@ -54,30 +56,31 @@ export async function sendMessageStream(
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? ""; // Garder la dernière ligne incomplète
+      // Découper sur \n\n (standard SSE) pour éviter les coupures TCP intra-ligne
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop() ?? "";
 
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
+      for (const part of parts) {
+        for (const line of part.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
           const dataStr = line.slice(6).trim();
           if (!dataStr) continue;
-
-          const data = JSON.parse(dataStr);
-          // Afficher le token EN PREMIER (même si done=true, cas guardrail)
-          if (data.token) {
-            onChunk(data.token);
-          }
-          if (data.done) {
-            // Fin du stream - récupérer les sources depuis le backend
-            const sources: Source[] = (data.sources ?? []).map(
-              (s: { document: string; page?: number; excerpt?: string }, i: number) => ({
-                id: `src-${i}`,
-                title: s.document,
-                excerpt: s.excerpt ?? "",
-                ...(s.page != null && { url: `page ${s.page}` }),
-              })
-            );
-            onComplete(sources, payload.conversationId ?? "");
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.token) onChunk(data.token);
+            if (data.done) {
+              const sources: Source[] = (data.sources ?? []).map(
+                (s: { document: string; page?: number; excerpt?: string }, i: number) => ({
+                  id: `src-${i}`,
+                  title: s.document,
+                  excerpt: s.excerpt ?? "",
+                  ...(s.page != null && { url: `page ${s.page}` }),
+                })
+              );
+              onComplete(sources, payload.conversationId ?? "");
+            }
+          } catch {
+            // chunk JSON malformé — on ignore et on continue
           }
         }
       }
@@ -87,15 +90,7 @@ export async function sendMessageStream(
   }
 }
 
-/**
- * Envoie un message au backend et retourne la réponse du chatbot (non-streaming).
- *
- * Le frontend envoie :  { message, themeId, conversationId, history }
- * Le backend répond  :  { answer, sources, conversation_id, disclaimer }
- *
- * La fonction mappe la réponse snake_case du backend en camelCase pour le
- * store Zustand, et transforme les SourceInfo en Source.
- */
+// Non-streaming fallback — kept for manual testing and future offline mode.
 export async function sendMessage(payload: ChatRequest): Promise<ChatResponse> {
   const response = await fetch(`${BASE_URL}/api/chat/`, {
     method: "POST",
@@ -164,23 +159,4 @@ export async function fetchTopicDetails(
   return response.json();
 }
 
-// ─── Health Check ──────────────────────────────────────────────────────────────
 
-export async function checkApiHealth(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE_URL}/api/health`, { method: "GET" });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-// ─── Conversations (localStorage uniquement pour l'instant) ───────────────────
-
-export async function fetchConversations(): Promise<void> {
-  // Les conversations sont persistées dans localStorage via Zustand.
-}
-
-export async function saveConversation(_id: string): Promise<void> {
-  // Placeholder – persistance serveur non implémentée.
-}

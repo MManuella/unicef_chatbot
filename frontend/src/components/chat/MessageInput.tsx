@@ -47,13 +47,13 @@ export default function MessageInput({
   const canSend = !!value.trim() && !disabled;
 
   return (
-    <div className="px-4 pb-5 pt-2">
+    <div className="px-4 pb-5 pt-2 bg-white dark:bg-transparent rounded-b-3xl">
       <div
         className={cn(
           "mx-auto max-w-3xl rounded-2xl border bg-white dark:bg-[#162132]",
           "border transition-all duration-200",
           focused
-            ? "border-[#1CABE2]/50 shadow-lg shadow-[#1CABE2]/8 ring-2 ring-[#1CABE2]/10 dark:border-[#1CABE2]/40"
+            ? "border-gray-300 shadow-sm shadow-gray-100 ring-2 ring-gray-100 dark:border-white/25 dark:ring-white/8"
             : "border-gray-200 shadow-sm hover:border-gray-300 hover:shadow-md dark:border-white/10 dark:shadow-black/10 dark:hover:border-white/18 dark:hover:shadow-black/10"
         )}
       >
@@ -64,7 +64,7 @@ export default function MessageInput({
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder=""
+          placeholder="Posez votre question sur la santé…"
           disabled={disabled}
           rows={1}
           className={cn(
@@ -94,7 +94,7 @@ export default function MessageInput({
             )}
             aria-label="Envoyer"
           >
-            <Icon icon="mdi:arrow-up" className="text-base" />
+            <Icon icon="mynaui:arrow-up" className="text-base" />
           </button>
         </div>
       </div>

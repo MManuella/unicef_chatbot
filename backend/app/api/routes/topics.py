@@ -1,8 +1,12 @@
-from fastapi import APIRouter
+import re
+from typing import Annotated
+from fastapi import APIRouter, HTTPException, Path
 from app.core.prompts import TOPIC_STARTERS
 from app.api.schemas import TopicResponse, SubTopic
 
 router = APIRouter()
+
+TopicId = Annotated[str, Path(pattern=r"^[a-z0-9_]{1,64}$")]
 
 
 @router.get("/")
@@ -32,32 +36,10 @@ async def get_topics() -> dict:
 
 
 @router.get("/{topic_id}/start")
-async def start_topic(topic_id: str) -> TopicResponse | dict:
-    """
-    GET /api/topics/vih_ist/start
-    
-    Quand l'utilisateur clique sur une thématique, cet endpoint retourne :
-    1. Le message d'introduction (l'IA "lance" la discussion)
-    2. Les sous-thèmes (boutons cliquables, comme PhiloGPT)
-    3. Les thématiques liées (suggérer d'autres discussions)
-    
-    Exemple : clic sur "VIH / IST" → retourne :
-    {
-        "id": "vih_ist",
-        "title": "VIH / IST",
-        "icon": "",
-        "starter_message": "Bonjour ! Parlons de la prévention...",
-        "sub_topics": [
-            {"label": "Prévention", "prompt": "Quels sont les moyens de..."},
-            {"label": "Dépistage", "prompt": "Comment et où peut-on se..."},
-            {"label": "Traitement", "prompt": "Quels sont les traitements..."}
-        ],
-        "related_topics": ["sante_reproductive", "epidemie"]
-    }
-    """
+async def start_topic(topic_id: TopicId) -> TopicResponse:
     topic_data = TOPIC_STARTERS.get(topic_id)
     if not topic_data:
-        return {"error": "Thématique non trouvée"}
+        raise HTTPException(status_code=404, detail="Thématique non trouvée")
 
     return TopicResponse(
         id=topic_id,

@@ -1,0 +1,39 @@
+# Direct dependencies only — compile with: pip-compile requirements.in -o requirements.txt
+# or: uv pip compile requirements.in -o requirements.txt
+
+# API
+fastapi
+pydantic-settings
+uvicorn[standard]
+
+# LangChain stack
+langchain
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-ollama
+langchain-huggingface
+langchain-qdrant
+langchain-mistralai
+
+# Vector store
+qdrant-client[grpc]
+
+# Embeddings / ML
+sentence-transformers
+# For CPU-only deployment (HF Spaces / no GPU):
+#   torch==X.X.X+cpu  --index-url https://download.pytorch.org/whl/cpu
+# For local dev with GPU, torch pulls nvidia-* packages automatically:
+torch
+
+# Caching
+redis[hiredis]
+
+# Document loaders
+pypdf
+docx2txt
+
+# Utilities
+python-dotenv
+ollama
+requests

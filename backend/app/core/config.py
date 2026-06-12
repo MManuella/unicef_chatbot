@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 512
     CHUNK_OVERLAP: int = 50
     TOP_K_RESULTS: int = 5
-    SIMILARITY_THRESHOLD: float = 0.1
+    SIMILARITY_THRESHOLD: float = 0.84
 
     # SEC-7 : valider les clés API au démarrage selon le provider choisi
     @model_validator(mode="after")

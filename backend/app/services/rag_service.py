@@ -65,6 +65,9 @@ async def _retrieve(vector_store: VectorStoreService, question: str):
     return [d for d in docs if not _is_toc_chunk(d.page_content)]
 
 
+NO_INFO_RESPONSE = "Je n'ai pas d'information sur ce sujet dans les documents UNICEF."
+
+
 class RAGService:
     def __init__(self, vector_store: VectorStoreService, llm_service: LLMService):
         self.vector_store = vector_store
@@ -73,6 +76,10 @@ class RAGService:
     async def query(self, question: str, history: list[dict] | None = None) -> dict:
         try:
             docs = await _retrieve(self.vector_store, question)
+            # No relevant documents found — refuse without calling the LLM.
+            # This prevents the model from hallucinating answers from general knowledge.
+            if not docs:
+                return {"answer": NO_INFO_RESPONSE, "sources": [], "disclaimer": None}
             context = "\n\n".join(d.page_content for d in docs)
             sources = _build_sources(docs)
             user_prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=question)
@@ -91,6 +98,10 @@ class RAGService:
 
     async def stream_query(self, question: str, history: list[dict] | None = None):
         docs = await _retrieve(self.vector_store, question)
+        # No relevant documents found — refuse without calling the LLM.
+        if not docs:
+            yield {"token": NO_INFO_RESPONSE, "sources": [], "disclaimer": None}
+            return
         context = "\n\n".join(d.page_content for d in docs)
         sources = _build_sources(docs)
         disclaimer = MEDICAL_DISCLAIMER if is_medical_question(question) else None

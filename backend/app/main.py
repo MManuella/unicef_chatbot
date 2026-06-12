@@ -43,22 +43,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # ── Lifespan ───────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
     from app.api.dependencies import get_chat_service
-    svc = get_chat_service()
-    if settings.LLM_PROVIDER.lower() == "ollama":
-        try:
-            await asyncio.wait_for(
-                svc.rag_service.llm_service.llm.ainvoke("init"),
-                timeout=30.0,
-            )
-            logging.info("[STARTUP] Ollama : modèle préchargé en RAM.")
-        except asyncio.TimeoutError:
-            logging.warning("[STARTUP] Ollama warm-up timeout (30s) — le modèle chargera à la première requête.")
-        except Exception as e:
-            logging.warning("[STARTUP] Ollama warm-up ignoré : %s", e)
-    else:
-        logging.info("[STARTUP] Provider '%s' prêt.", settings.LLM_PROVIDER)
+    get_chat_service()
+    logging.info("[STARTUP] Provider '%s' prêt.", settings.LLM_PROVIDER)
     yield
 
 

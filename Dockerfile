@@ -96,8 +96,9 @@ RUN chmod +x /app/start.sh
 # HF Spaces attend le port 7860
 EXPOSE 7860
 
-# Variables d'environnement — à surcharger via les Secrets HF Spaces
+# Variables d'environnement runtime
 ENV PYTHONUNBUFFERED=1
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV LLM_PROVIDER=mistral_api
 
 CMD ["/app/start.sh"]

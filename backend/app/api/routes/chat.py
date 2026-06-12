@@ -51,6 +51,11 @@ async def chat_stream(
                 history=[m.model_dump() for m in request.history],
             ),
             media_type="text/event-stream",
+            headers={
+                "X-Accel-Buffering": "no",
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
         )
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))

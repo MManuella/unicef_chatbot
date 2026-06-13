@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 1500
 
     MISTRAL_API_KEY: str = ""
-    MISTRAL_MODEL: str = "mistral-small-latest"
+    MISTRAL_MODEL: str = "open-mistral-7b"
 
     HF_API_KEY: str = ""
     HF_INFERENCE_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"

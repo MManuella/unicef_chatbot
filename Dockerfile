@@ -59,14 +59,23 @@ RUN pip install --no-cache-dir -r requirements-hf.txt
 # ── Code source backend ───────────────────────────────────────────────────────
 COPY backend/ ./backend/
 
-# ── Téléchargement du PDF depuis GitHub ───────────────────────────────────────
-# Le PDF est exclu du push HF Spaces (.hfignore) car HF refuse les binaires.
-# Il est hébergé dans les GitHub Releases (binary assets, URL publique directe).
-ARG GITHUB_PDF_URL=https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/guide-peda-v6-2.pdf
+# ── Téléchargement des PDFs depuis GitHub Releases ────────────────────────────
+# Les PDFs sont exclus du push HF Spaces (.hfignore) car HF refuse les binaires.
+# Ils sont hébergés dans les GitHub Releases (binary assets, URL publique directe).
 RUN mkdir -p /app/backend/data/documents && \
-    curl -L --retry 3 --fail "$GITHUB_PDF_URL" \
-         -o /app/backend/data/documents/guide-peda-v6-2.pdf && \
-    echo "PDF téléchargé : $(wc -c < /app/backend/data/documents/guide-peda-v6-2.pdf) octets"
+    curl -L --retry 3 --fail \
+         "https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/guide-peda-v6-2.pdf" \
+         -o "/app/backend/data/documents/guide-peda-v6-2.pdf" && \
+    curl -L --retry 3 --fail \
+         "https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/AgirPF_Manuel-de-Formation-sur-la-SSR.pdf" \
+         -o "/app/backend/data/documents/AgirPF_Manuel-de-Formation-sur-la-SSR.pdf" && \
+    curl -L --retry 3 --fail \
+         "https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/Livret-GMH.pdf" \
+         -o "/app/backend/data/documents/Livret-GMH.pdf" && \
+    curl -L --retry 3 --fail \
+         "https://github.com/MManuella/unicef_chatbot/releases/download/v1.0/Politique-et-Normes-SSR-Togo-2009.pdf" \
+         -o "/app/backend/data/documents/Politique-et-Normes-SSR-Togo-2009.pdf" && \
+    echo "PDFs téléchargés : $(ls /app/backend/data/documents/*.pdf | wc -l) fichiers"
 
 # ── Pré-indexation des documents dans Qdrant (mode fichier local) ─────────────
 # Cette étape est exécutée au BUILD, pas au démarrage.

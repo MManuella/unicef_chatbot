@@ -1,13 +1,13 @@
 ---
-title: UNICEF Chatbot
+title: U-Assistant — Assistant Santé UNICEF
 colorFrom: blue
-colorTo: blue
+colorTo: cyan
 sdk: docker
 app_port: 7860
 pinned: false
 ---
 
-# UNICEF Advisory Chatbot
+# U-Assistant — Assistant de Santé pour les Populations
 
-Chatbot de conseils de santé basé sur les documents UNICEF.
-Utilise un pipeline RAG (Retrieval-Augmented Generation) avec Mistral AI.
+**U-Assistant** est un chatbot intelligent développé dans le cadre des programmes de l'UNICEF. Il fournit des conseils, des informations et un accompagnement en santé aux populations, en particulier aux jeunes et aux communautés vulnérables. Il répond aux questions de santé en se basant exclusivement sur des documents officiels UNICEF, sans jamais inventer d'informations.
+ 

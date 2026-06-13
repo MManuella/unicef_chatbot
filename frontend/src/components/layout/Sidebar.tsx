@@ -127,7 +127,7 @@ function ConversationItem({
         "group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all",
         isActive
           ? "bg-gray-200/70 dark:bg-blue-900/20"
-          : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60"
+          : "hover:bg-gray-200/80 dark:hover:bg-gray-700/60"
       )}
       onClick={onSelect}
       role="button"

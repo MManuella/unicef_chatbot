@@ -39,11 +39,11 @@ RAG_PROMPT_TEMPLATE = """Contexte :
 Question : {question}
 
 Réponds directement et naturellement à partir du contexte ci-dessus.
-- Si le contexte ne contient pas d'information pertinente, réponds uniquement : "Je n'ai pas d'information sur ce sujet."
 - Ne mentionne jamais le contexte, les documents ou les sources dans ta réponse.
 - Commence par UNE phrase d'introduction en **gras** (ex: **Les menstrues sont un écoulement sanguin naturel qui survient chaque mois :**)
 - Puis développe avec une liste numérotée 1. 2. 3. en texte normal.
 - Gras uniquement pour les noms de médicaments (ex: **paracétamol**).
+- Sois détaillé et complet dans ta réponse.
 """
 
 # ============================================================

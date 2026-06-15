@@ -49,9 +49,10 @@ class VectorStoreService:
             embedding=self.embeddings,
         )
 
-    async def similarity_search(self, query: str, k: int = None):
+    async def similarity_search(self, query: str, k: int = None) -> tuple[list, float]:
         k = k or settings.TOP_K_RESULTS
         results = await self.vector_store.asimilarity_search_with_score(query, k=k)
-        # Drop chunks whose cosine similarity is below threshold — prevents
-        # injecting irrelevant context that leads the LLM off-topic.
-        return [doc for doc, score in results if score >= settings.SIMILARITY_THRESHOLD]
+        filtered = [(doc, score) for doc, score in results if score >= settings.SIMILARITY_THRESHOLD]
+        docs = [doc for doc, _ in filtered]
+        best_score = max((score for _, score in filtered), default=0.0)
+        return docs, best_score

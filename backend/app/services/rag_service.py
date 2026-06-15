@@ -11,6 +11,7 @@ Flux :
 import logging
 import re
 
+from app.core.config import settings
 from app.core.prompts import SYSTEM_PROMPT, RAG_PROMPT_TEMPLATE
 from app.services.llm_service import LLMService
 from app.services.vector_store import VectorStoreService
@@ -60,9 +61,10 @@ def _build_sources(docs) -> list[SourceInfo]:
     return sources
 
 
-async def _retrieve(vector_store: VectorStoreService, question: str):
-    docs = await vector_store.similarity_search(question)
-    return [d for d in docs if not _is_toc_chunk(d.page_content)]
+async def _retrieve(vector_store: VectorStoreService, question: str) -> tuple[list, float]:
+    docs, best_score = await vector_store.similarity_search(question)
+    filtered = [d for d in docs if not _is_toc_chunk(d.page_content)]
+    return filtered, best_score
 
 
 NO_INFO_RESPONSE = "Je n'ai pas d'information sur ce sujet."
@@ -75,10 +77,10 @@ class RAGService:
 
     async def query(self, question: str, history: list[dict] | None = None) -> dict:
         try:
-            docs = await _retrieve(self.vector_store, question)
-            # No relevant documents found — refuse without calling the LLM.
-            # This prevents the model from hallucinating answers from general knowledge.
-            if not docs:
+            docs, best_score = await _retrieve(self.vector_store, question)
+            # Refuse without calling the LLM if no docs found or best chunk is
+            # not confident enough — prevents hallucination from thin context.
+            if not docs or best_score < settings.MIN_RELEVANCE_SCORE:
                 return {"answer": NO_INFO_RESPONSE, "sources": [], "disclaimer": None}
             context = "\n\n".join(d.page_content for d in docs)
             sources = _build_sources(docs)
@@ -97,9 +99,8 @@ class RAGService:
             }
 
     async def stream_query(self, question: str, history: list[dict] | None = None):
-        docs = await _retrieve(self.vector_store, question)
-        # No relevant documents found — refuse without calling the LLM.
-        if not docs:
+        docs, best_score = await _retrieve(self.vector_store, question)
+        if not docs or best_score < settings.MIN_RELEVANCE_SCORE:
             yield {"token": NO_INFO_RESPONSE, "sources": [], "disclaimer": None}
             return
         context = "\n\n".join(d.page_content for d in docs)

@@ -1,19 +1,15 @@
 from fastapi import APIRouter
+from app.core.config import settings
 
-# Un "router" est un groupe de routes. On le branchera dans main.py
 router = APIRouter()
 
 
 @router.get("/health")
 async def health_check():
-    """
-    Endpoint de vérification : GET /api/health
-    
-    Retourne {"status": "ok"} si l'API fonctionne.
-    C'est tout. Pas de logique compliquée ici.
-    
-    Utilité :
-    - Le frontend peut vérifier que le backend est joignable
-    - Docker peut vérifier que le conteneur est sain (healthcheck)
-    """
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "llm_provider": settings.LLM_PROVIDER,
+        "llm_model": settings.MISTRAL_MODEL if settings.LLM_PROVIDER == "mistral_api" else settings.LLM_MODEL,
+        "similarity_threshold": settings.SIMILARITY_THRESHOLD,
+        "min_relevance_score": settings.MIN_RELEVANCE_SCORE,
+    }

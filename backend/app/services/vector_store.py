@@ -56,3 +56,4 @@ class VectorStoreService:
         docs = [doc for doc, _ in filtered]
         best_score = max((score for _, score in filtered), default=0.0)
         return docs, best_score
+
